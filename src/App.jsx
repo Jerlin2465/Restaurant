@@ -34,7 +34,7 @@ import Tableorderstatus from "./pages/admin/Tableorderstatus";
 
 import ForgotPassword from "./pages/Forgotpassword";
 import ResetPassword from "./pages/Resetpassword";
-import NotFound from "./pages/Notfound";
+import Notfound from "./pages/Notfound";
 import Chefdeliveryorder from "./pages/Workers/Chefdeliveryorder";
 import Deliveryfooddetails from "./pages/Workers/Deliveryfooddetails";
 
@@ -121,7 +121,7 @@ function App() {
             />
           </>
         )}
-        <Route path="/notfound" element={<NotFound />} />
+        <Route path="/notfound" element={<Notfound />} />
       </Routes>
     </>
   );
