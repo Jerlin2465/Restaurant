@@ -51,7 +51,14 @@ const Tablebooking = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+   // Check if user is logged in first
+    const token = localStorage.getItem("token");
+    if (!token) {
+        showSnackbar("Please login to book a table", "warning");
+        navigate("/login");
+        return;
+    }
+    
     if (
       !formData.fullName ||
       !formData.phone ||
