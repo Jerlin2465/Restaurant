@@ -13,7 +13,6 @@ import {
   Snackbar,
   Alert,
   Divider,
-  Avatar,
   Stack,
   IconButton,
   Tooltip,
@@ -40,6 +39,18 @@ const statusStyle = {
     bg: "#451a0344",
     label: "Pending",
     icon: <AccessTimeIcon fontSize="small" />,
+  },
+  Placed: {
+    color: "#f59e0b",
+    bg: "#451a0344",
+    label: "Placed",
+    icon: <AccessTimeIcon fontSize="small" />,
+  },
+  Processing: {
+    color: "#f97316",
+    bg: "#43140744",
+    label: "Cooking",
+    icon: <WhatshotIcon fontSize="small" />,
   },
   Cooking: {
     color: "#f97316",
@@ -89,28 +100,65 @@ const DeliveryOrderCard = ({
   onUpdateStatus,
   onViewDetails,
   currentDeliveryPersonId,
+  hasActiveJob,
 }) => {
   const [busy, setBusy] = useState(false);
   const status = order.orderStatus || order.status || "Pending";
   const sStyle = statusStyle[status] || statusStyle.Pending;
   const items = extractItems(order);
 
+  // ✅ FIXED: Get customer data from userId (which references "Register" model)
+  const customerData = order.userId || {};
   const customerName =
-    order.userId?.fullname || order.userId?.name || "Customer";
-  const phone =
-    order.userId?.phone || order.userId?.number || order.phone || "";
+    customerData?.fullname ||
+    customerData?.name ||
+    customerData?.username ||
+    "Customer";
+  const customerPhone =
+    customerData?.phone ||
+    customerData?.number ||
+    customerData?.contactNumber ||
+    "";
+
+  // ✅ FIXED: Get delivery person data from deliveryPersonId (which references "Register" model)
+  const deliveryPersonData = order.deliveryPersonId || {};
+  const deliveryPersonName =
+    deliveryPersonData?.fullname ||
+    deliveryPersonData?.name ||
+    deliveryPersonData?.username ||
+    "Assigned";
+  const deliveryPersonPhone =
+    deliveryPersonData?.phone ||
+    deliveryPersonData?.number ||
+    deliveryPersonData?.contactNumber ||
+    "N/A";
+
   const address =
     order.deliveryAddress || order.address || "Address not provided";
 
+  // Check if delivery person is assigned
   const isAssignedToMe =
     order.deliveryPersonId?._id === currentDeliveryPersonId ||
     order.deliveryPersonId === currentDeliveryPersonId;
 
-  const isTakenByOther = order.deliveryPersonId && !isAssignedToMe;
+  const isTakenByOther =
+    order.deliveryPersonId &&
+    order.deliveryPersonId !== currentDeliveryPersonId &&
+    order.deliveryPersonId?._id !== currentDeliveryPersonId;
+
+  // Check if this is an active job (not delivered or cancelled)
+  const isActiveJob =
+    isAssignedToMe && !["Delivered", "Cancelled"].includes(status);
 
   const handleTakeJob = async () => {
     if (!currentDeliveryPersonId) {
       alert("Please login as delivery person");
+      return;
+    }
+    if (hasActiveJob) {
+      // We'll use snackbar but need to pass setMsg from parent
+      // For now using alert as fallback
+      alert("⚠️ Complete your current delivery before taking a new job!");
       return;
     }
     setBusy(true);
@@ -159,13 +207,21 @@ const DeliveryOrderCard = ({
           <Typography
             sx={{ color: sStyle.color, fontWeight: 700, fontSize: 15 }}
           >
-            🏍️ Order #{order._id.slice(-6).toUpperCase()}
+            Order #{order._id.slice(-6).toUpperCase()}
           </Typography>
           <Typography sx={{ color: `${sStyle.color}99`, fontSize: 11 }}>
             {new Date(order.createdAt).toLocaleString()}
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+            alignItems: "center",
+            ml:1
+          }}
+        >
           <Chip
             icon={sStyle.icon}
             label={sStyle.label}
@@ -190,13 +246,26 @@ const DeliveryOrderCard = ({
               }}
             />
           )}
-          {isAssignedToMe && (
+          {isAssignedToMe && isActiveJob && (
             <Chip
-              label="My Job"
+              label="My Active Job"
               size="small"
               sx={{
-                bgcolor: "#4ade8022",
-                color: "#4ade80",
+                bgcolor: "#facc1522",
+                color: "#facc15",
+                fontWeight: 600,
+                fontSize: 10,
+                border: "1px solid #facc1544",
+              }}
+            />
+          )}
+          {isAssignedToMe && status === "Delivered" && (
+            <Chip
+              label="Completed "
+              size="small"
+              sx={{
+                bgcolor: "#34d39922",
+                color: "#34d399",
                 fontWeight: 600,
                 fontSize: 10,
               }}
@@ -206,21 +275,19 @@ const DeliveryOrderCard = ({
       </Box>
 
       <Box sx={{ p: 2.5 }}>
-        {/* Customer Info */}
-        {/* Customer Details */}
+        {/* ✅ FIXED: Customer Info with proper data */}
         <Box sx={{ mb: 2 }}>
           <Typography sx={{ color: "#facc15", fontWeight: "bold" }}>
             Customer
           </Typography>
-
-          <Typography sx={{ color: "#fff" }}>{order.userId?.name}</Typography>
-
+          <Typography sx={{ color: "#fff" }}>{customerName}</Typography>
           <Typography sx={{ color: "#94a3b8" }}>
-            📞{order.userId?.number}
+            {customerPhone || "N/A"}
           </Typography>
+
           {/* Delivery Address */}
           {address && address !== "Address not provided" && (
-            <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
+            <Box sx={{ display: "flex", gap: 1, mb: 1.5, mt: 1 }}>
               <LocationOnIcon sx={{ color: "#64748b", fontSize: 16 }} />
               <Typography sx={{ color: "#94a3b8", fontSize: 12 }}>
                 {address}
@@ -229,20 +296,15 @@ const DeliveryOrderCard = ({
           )}
         </Box>
 
-        {/* Delivery Partner */}
+        {/* ✅ FIXED: Delivery Partner with proper data */}
         {order.deliveryPersonId && (
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ color: "#22c55e", fontWeight: "bold" }}>
               Delivery Partner
             </Typography>
-
-            <Typography sx={{ color: "#fff" }}>
-              {order.deliveryPersonId?.fullname || order.deliveryPersonId?.name}
-            </Typography>
-
+            <Typography sx={{ color: "#fff" }}>{deliveryPersonName}</Typography>
             <Typography sx={{ color: "#94a3b8" }}>
-              📞
-              {order.deliveryPersonId?.phone || order.deliveryPersonId?.number}
+              {deliveryPersonPhone}
             </Typography>
           </Box>
         )}
@@ -317,22 +379,26 @@ const DeliveryOrderCard = ({
           </Box>
 
           {/* Action Buttons - Delivery Person Flow */}
-
-          {/* PENDING - Take Job (if not taken) */}
           {status === "Pending" && !isTakenByOther && (
             <Button
               variant="contained"
-              disabled={busy}
+              disabled={busy || hasActiveJob}
               startIcon={<AssignmentIcon />}
               sx={{
-                bgcolor: "#facc15",
-                color: "#000",
+                bgcolor: hasActiveJob ? "#6b7280" : "#facc15",
+                color: hasActiveJob ? "#fff" : "#000",
                 fontWeight: 700,
-                "&:hover": { bgcolor: "#eab308" },
+                "&:hover": {
+                  bgcolor: hasActiveJob ? "#6b7280" : "#eab308",
+                },
               }}
               onClick={handleTakeJob}
             >
-              {busy ? "Taking..." : "Take Job"}
+              {busy
+                ? "Taking..."
+                : hasActiveJob
+                  ? "Complete Current Job First"
+                  : "Take Job"}
             </Button>
           )}
 
@@ -347,7 +413,6 @@ const DeliveryOrderCard = ({
             <Button
               variant="contained"
               disabled={busy}
-              startIcon={<LocalShippingIcon />}
               sx={{
                 bgcolor: "#f97316",
                 color: "#fff",
@@ -360,21 +425,26 @@ const DeliveryOrderCard = ({
             </Button>
           )}
 
-          {/* READY - Take Job or Start Delivery */}
           {status === "Ready" && !isAssignedToMe && !isTakenByOther && (
             <Button
               variant="contained"
-              disabled={busy}
+              disabled={busy || hasActiveJob}
               startIcon={<AssignmentIcon />}
               sx={{
-                bgcolor: "#facc15",
-                color: "#000",
+                bgcolor: hasActiveJob ? "#6b7280" : "#facc15",
+                color: hasActiveJob ? "#fff" : "#000",
                 fontWeight: 700,
-                "&:hover": { bgcolor: "#eab308" },
+                "&:hover": {
+                  bgcolor: hasActiveJob ? "#6b7280" : "#eab308",
+                },
               }}
               onClick={handleTakeJob}
             >
-              {busy ? "Taking..." : "Take Job"}
+              {busy
+                ? "Taking..."
+                : hasActiveJob
+                  ? "Complete Current Job First"
+                  : "Take Job"}
             </Button>
           )}
 
@@ -382,7 +452,6 @@ const DeliveryOrderCard = ({
             <Button
               variant="contained"
               disabled={busy}
-              startIcon={<LocalShippingIcon />}
               sx={{
                 bgcolor: "#f97316",
                 color: "#fff",
@@ -402,7 +471,6 @@ const DeliveryOrderCard = ({
             />
           )}
 
-          {/* OUT_FOR_DELIVERY - Mark Delivered */}
           {status === "Out_for_Delivery" && isAssignedToMe && (
             <Button
               variant="contained"
@@ -427,18 +495,16 @@ const DeliveryOrderCard = ({
             />
           )}
 
-          {/* DELIVERED - Show completed */}
           {status === "Delivered" && (
             <Chip
-              label="✅ Delivered"
+              label="Delivered"
               sx={{ bgcolor: "#34d39922", color: "#34d399", fontWeight: 600 }}
             />
           )}
 
-          {/* CANCELLED */}
           {status === "Cancelled" && (
             <Chip
-              label="❌ Cancelled"
+              label=" Cancelled"
               sx={{ bgcolor: "#ef444422", color: "#ef4444", fontWeight: 600 }}
             />
           )}
@@ -472,10 +538,36 @@ const DeliveryDashboard = () => {
 
   const fetchOrders = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       const res = await axios.get(`${API}/order/all-orders`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const allOrders = res.data.orders || res.data.data || [];
+      if (allOrders.length > 0) {
+        const sample = allOrders[0];
+
+        // ✅ Check if data is populated
+        if (!sample.userId?.name) {
+          console.warn(
+            "⚠️ WARNING: User name is missing! Backend population failed.",
+          );
+          console.warn("User data received:", sample.userId);
+        }
+        if (sample.deliveryPersonId && !sample.deliveryPersonId?.name) {
+          console.warn(
+            "⚠️ WARNING: Delivery person name is missing! Backend population failed.",
+          );
+          console.warn(
+            "Delivery person data received:",
+            sample.deliveryPersonId,
+          );
+        }
+      }
 
       // Filter only delivery orders
       const deliveryOrders = allOrders.filter(
@@ -507,6 +599,24 @@ const DeliveryDashboard = () => {
   // Take Job - Assign delivery person to order
   const takeJob = async (orderId) => {
     try {
+      // Check if already has an active job before making API call
+      const hasActive = orders.some((o) => {
+        const isMine =
+          o.deliveryPersonId?._id === currentDeliveryPersonId ||
+          o.deliveryPersonId === currentDeliveryPersonId;
+        const status = o.orderStatus || o.status || "";
+        return isMine && !["Delivered", "Cancelled"].includes(status);
+      });
+
+      if (hasActive) {
+        setMsg({
+          open: true,
+          text: "⚠️ Complete your current delivery before taking a new job!",
+          severity: "warning",
+        });
+        return;
+      }
+
       await axios.put(
         `${API}/order/assign-delivery/${orderId}`,
         { deliveryPersonId: currentDeliveryPersonId },
@@ -516,7 +626,7 @@ const DeliveryDashboard = () => {
       );
       setMsg({
         open: true,
-        text: "Job taken successfully!",
+        text: "Job taken successfully! 🏍️",
         severity: "success",
       });
       fetchOrders();
@@ -542,7 +652,7 @@ const DeliveryDashboard = () => {
       );
       setMsg({
         open: true,
-        text: `Order marked as ${newStatus.replace(/_/g, " ")}`,
+        text: `Order marked as ${newStatus.replace(/_/g, " ")} 🎉`,
         severity: "success",
       });
       fetchOrders();
@@ -572,28 +682,34 @@ const DeliveryDashboard = () => {
     );
   }
 
+  // Check if delivery person has an active job
+  const hasActiveJob = orders.some((o) => {
+    const isMine =
+      o.deliveryPersonId?._id === currentDeliveryPersonId ||
+      o.deliveryPersonId === currentDeliveryPersonId;
+    const status = o.orderStatus || o.status || "";
+    return isMine && !["Delivered", "Cancelled"].includes(status);
+  });
+
   // Filter orders
   const getFilteredOrders = () => {
     let filtered = orders;
+
     if (filter === "available") {
-      // Show only orders that are Ready and not assigned to anyone
       filtered = orders.filter((o) => {
         const status = o.orderStatus || o.status || "";
-        return !o.deliveryPersonId && status === "Ready";
+        const hasDeliveryPerson = !!o.deliveryPersonId;
+        const isReady = status === "Ready";
+        return isReady && !hasDeliveryPerson;
       });
     } else if (filter === "my-jobs") {
-      // Show orders assigned to current delivery person
       filtered = orders.filter((o) => {
         const isMine =
           o.deliveryPersonId?._id === currentDeliveryPersonId ||
           o.deliveryPersonId === currentDeliveryPersonId;
-        const status = o.orderStatus || o.status || "";
-        return (
-          isMine && ["Pending", "Ready", "Out_for_Delivery"].includes(status)
-        );
+        return isMine;
       });
     } else if (filter === "completed") {
-      // Show completed orders by current delivery person
       filtered = orders.filter((o) => {
         const isMine =
           o.deliveryPersonId?._id === currentDeliveryPersonId ||
@@ -602,15 +718,16 @@ const DeliveryDashboard = () => {
         return isMine && status === "Delivered";
       });
     }
-    // "all" shows all delivery orders
     return filtered;
   };
 
   const filteredOrders = getFilteredOrders();
 
+  // Count statistics
   const availableOrders = orders.filter((o) => {
     const status = o.orderStatus || o.status || "";
-    return !o.deliveryPersonId && status === "Ready";
+    const hasDeliveryPerson = !!o.deliveryPersonId;
+    return status === "Ready" && !hasDeliveryPerson;
   }).length;
 
   const myActiveJobs = orders.filter((o) => {
@@ -618,7 +735,7 @@ const DeliveryDashboard = () => {
       o.deliveryPersonId?._id === currentDeliveryPersonId ||
       o.deliveryPersonId === currentDeliveryPersonId;
     const status = o.orderStatus || o.status || "";
-    return isMine && ["Pending", "Ready", "Out_for_Delivery"].includes(status);
+    return isMine && !["Delivered", "Cancelled"].includes(status);
   }).length;
 
   const completedCount = orders.filter((o) => {
@@ -663,10 +780,10 @@ const DeliveryDashboard = () => {
           <Chip
             label={`${myActiveJobs} My Jobs`}
             sx={{
-              bgcolor: "#facc1522",
-              color: "#facc15",
+              bgcolor: myActiveJobs > 0 ? "#facc1522" : "#6b728022",
+              color: myActiveJobs > 0 ? "#facc15" : "#6b7280",
               fontWeight: 700,
-              border: "1px solid #facc1544",
+              border: `1px solid ${myActiveJobs > 0 ? "#facc1544" : "#6b728044"}`,
             }}
           />
           <Chip
@@ -744,6 +861,7 @@ const DeliveryDashboard = () => {
                 onUpdateStatus={updateStatus}
                 onViewDetails={(id) => navigate(`/delivery/order/${id}`)}
                 currentDeliveryPersonId={currentDeliveryPersonId}
+                hasActiveJob={hasActiveJob}
               />
             </Grid>
           ))}

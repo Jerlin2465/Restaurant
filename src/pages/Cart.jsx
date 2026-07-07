@@ -26,6 +26,13 @@ const Cart = () => {
   const [address, setAddress] = useState("");
   const navigate = useNavigate();
 
+  // Calculate delivery charge based on total price
+  const getDeliveryCharge = (total) => {
+    if (total >= 1000) return 0;
+    if (total >= 500) return 25;
+    return 50;
+  };
+
   const getCart = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -166,6 +173,10 @@ const Cart = () => {
       console.log(error);
     }
   };
+
+  // Calculate delivery charge
+  const deliveryCharge = getDeliveryCharge(totalPrice);
+  const finalTotal = totalPrice + deliveryCharge;
 
   return (
     <Box
@@ -345,11 +356,34 @@ const Cart = () => {
               Order Summary
             </Typography>
             <Divider sx={{ mb: 2 }} />
-            <Typography mb={1}>Items: {cartItems.length}</Typography>
+
+            <Box sx={{ mb: 1 }}>
+              <Typography>Items: {cartItems.length}</Typography>
+              <Typography>Subtotal: ₹{totalPrice}</Typography>
+              <Typography>
+                Delivery Charge:
+                {deliveryCharge === 0 ? (
+                  <span style={{ color: "green", fontWeight: "bold" }}>
+                    {" "}
+                    FREE
+                  </span>
+                ) : (
+                  <span> ₹{deliveryCharge}</span>
+                )}
+              </Typography>
+              {deliveryCharge === 0 && (
+                <Typography variant="caption" color="green">
+                  ✨ Free delivery on orders above ₹1000
+                </Typography>
+              )}
+            </Box>
+
             <Divider sx={{ mb: 2 }} />
+
             <Typography variant="h6" fontWeight="bold">
-              Total: ₹{totalPrice + 50}
+              Total: ₹{finalTotal}
             </Typography>
+
             <Typography
               sx={{
                 mt: 2,
@@ -372,9 +406,10 @@ const Cart = () => {
 
                   navigate("/payment", {
                     state: {
-                      totalAmount: totalPrice + 50,
+                      totalAmount: finalTotal,
                       cartItem: cartItems,
                       address,
+                      deliveryCharge,
                     },
                   });
                 }}

@@ -230,6 +230,7 @@ const ChefOrderCard = ({ order, onUpdate }) => {
 const Chefdashboard = () => {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
+  const [deliveryOrders, setDeliveryOrders] = useState([]); // Added state for delivery orders
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
   const [msg, setMsg] = useState({ open: false, text: "", severity: "info" });
@@ -269,6 +270,30 @@ const Chefdashboard = () => {
     }
   };
 
+  // ✅ Fetch delivery orders to get count for badge
+  const fetchDeliveryOrders = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const res = await axios.get(`${API}/order/all-orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const allOrders = res.data.orders || res.data.data || [];
+
+      // Filter only delivery orders
+      const deliveryOrders = allOrders.filter(
+        (order) =>
+          order.orderType === "delivery" ||
+          order.deliveryAddress ||
+          order.address,
+      );
+      setDeliveryOrders(deliveryOrders);
+    } catch (error) {
+      console.error("Fetch delivery orders error:", error.message);
+    }
+  };
+
   // Toggle stock function
   const toggleStock = async (id, stock) => {
     const newStock = stock === "available" ? "unavailable" : "available";
@@ -299,11 +324,18 @@ const Chefdashboard = () => {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await Promise.all([fetchOrders(), fetchProducts()]);
+      await Promise.all([
+        fetchOrders(),
+        fetchProducts(),
+        fetchDeliveryOrders(),
+      ]);
       setLoading(false);
     };
     init();
-    const interval = setInterval(fetchOrders, 15000);
+    const interval = setInterval(() => {
+      fetchOrders();
+      fetchDeliveryOrders(); // Also refresh delivery orders count
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -328,6 +360,11 @@ const Chefdashboard = () => {
       setMsg({ open: true, text: "Failed to update order", severity: "error" });
     }
   };
+
+  // Count pending delivery orders (Placed + Processing)
+  const pendingDeliveryCount = deliveryOrders.filter(
+    (o) => o.orderStatus === "Placed" || o.orderStatus === "Processing",
+  ).length;
 
   if (loading) {
     return (
@@ -385,7 +422,7 @@ const Chefdashboard = () => {
         </Box>
       </Box>
 
-      {/* Tabs */}
+      {/* Tabs with Badges */}
       <Tabs
         value={tab}
         onChange={(_, v) => setTab(v)}
@@ -405,7 +442,25 @@ const Chefdashboard = () => {
             </Badge>
           }
         />
-        <Tab label=" Delivery Orders" iconPosition="start" />
+        <Tab
+          label={
+            <Badge
+              badgeContent={pendingDeliveryCount}
+              color="warning"
+              sx={{
+                "& .MuiBadge-badge": {
+                  bgcolor: "#f97316",
+                  color: "#fff",
+                },
+              }}
+            >
+              <Box sx={{ pr: pendingDeliveryCount > 0 ? 1.5 : 0 }}>
+                Delivery Orders
+              </Box>
+            </Badge>
+          }
+          iconPosition="start"
+        />
         <Tab
           label={
             <Badge badgeContent={completedOrders.length} color="success">
@@ -431,8 +486,8 @@ const Chefdashboard = () => {
               display: "flex",
               gap: 1.5,
               flexWrap: "wrap",
-              marginBottom:4,
-              marginLeft:2,
+              marginBottom: 4,
+              marginLeft: 2,
             }}
           >
             {[

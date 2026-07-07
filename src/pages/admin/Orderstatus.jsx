@@ -36,10 +36,9 @@ import { useNavigate } from "react-router-dom";
 import { FaEye, FaTrash } from "react-icons/fa";
 import AssignmentReturnOutlinedIcon from "@mui/icons-material/AssignmentReturnOutlined";
 
-// ─── API URL ─────────────────────────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL;
 
-// ─── DARK THEME TOKENS ───────────────────────────────────────────────────────
+// ─── DARK THEME TOKENS 
 const dark = {
   pageBg: "#0d0d0d",
   surfacePrimary: "#111111",
@@ -52,7 +51,7 @@ const dark = {
   textMuted: "#666666",
 };
 
-// ─── REUSABLE DARK INPUT SX ──────────────────────────────────────────────────
+// ─── REUSABLE DARK INPUT SX 
 const darkInputSx = {
   "& .MuiOutlinedInput-root": {
     background: "#1a1a1a",
@@ -67,7 +66,7 @@ const darkInputSx = {
   },
 };
 
-// ─── REUSABLE DARK SELECT SX ─────────────────────────────────────────────────
+// ─── REUSABLE DARK SELECT SX 
 const darkSelectSx = {
   background: "#1a1a1a",
   color: dark.textPrimary,
@@ -77,7 +76,7 @@ const darkSelectSx = {
   "& .MuiSvgIcon-root": { color: dark.textMuted },
 };
 
-// ─── REUSABLE DARK SELECT MENU PROPS ─────────────────────────────────────────
+// ─── REUSABLE DARK SELECT MENU PROPS 
 const darkSelectMenuProps = {
   PaperProps: {
     sx: {
@@ -92,7 +91,7 @@ const darkSelectMenuProps = {
   },
 };
 
-// ─── STATUS CONFIG ────────────────────────────────────────────────────────────
+// ─── STATUS CONFIG 
 const STATUS_OPTIONS = [
   { value: "", label: "All", bg: "#1e1e1e", color: "#aaaaaa", dot: null },
   {
@@ -110,8 +109,8 @@ const STATUS_OPTIONS = [
     dot: "#FBBF24",
   },
   {
-    value: "Shipped",
-    label: "Shipped",
+    value: "Picked Up",
+    label: "Picked Up",
     bg: "#001a2e",
     color: "#38BDF8",
     dot: "#38BDF8",
@@ -146,7 +145,7 @@ const statusChipStyle = (status) => {
     : { bg: "#1e1e1e", color: "#aaaaaa" };
 };
 
-// ─── SAFE INITIALS ───────────────────────────────────────────────────────────
+// ─── SAFE INITIALS 
 const initials = (name) => {
   if (!name || name === "-") return "?";
   return name
@@ -157,12 +156,12 @@ const initials = (name) => {
     .toUpperCase();
 };
 
-// ─── FLATTEN ORDERS (one row per ORDER, products grouped inside) ──────────────
+// ─── FLATTEN ORDERS (one row per ORDER, products grouped inside) 
 const flattenOrders = (orders) => {
   return orders.map((order) => {
     const products = (order.products || []).map((item) => ({
       productId: item.productId?._id || "",
-      productName: item.productId?.productName || "-",
+      productName: item.productId?.name || "-",
       price: item.productId?.price || item.price || 0,
       quantity: item.quantity,
       lineTotal: (item.productId?.price || item.price || 0) * item.quantity,
@@ -191,7 +190,7 @@ const flattenOrders = (orders) => {
   });
 };
 
-// ─── PRODUCT LIST CELL ────────────────────────────────────────────────────────
+// ─── PRODUCT LIST CELL 
 // Renders all products in a single order as a compact list inside the table cell
 const ProductListCell = ({ products, navigate }) => (
   <Box sx={{ display: "flex", flexDirection: "column", gap: 0.8 }}>
@@ -433,12 +432,7 @@ const OrderList = () => {
       bg: "#1e1e3a",
       color: "#818CF8",
     },
-    {
-      label: "Processing",
-      value: countByStatus("Processing"),
-      bg: "#2a2000",
-      color: "#FBBF24",
-    },
+   
     {
       label: "Ready",
       value: countByStatus("Ready"),
@@ -837,7 +831,7 @@ const OrderList = () => {
                         >
                           <MenuItem value="Placed">Placed</MenuItem>
                           <MenuItem value="Processing">Processing</MenuItem>
-                          <MenuItem value="Shipped">Shipped</MenuItem>
+                          <MenuItem value="Picked Up">Picked Up</MenuItem>
                           <MenuItem value="Delivered">Delivered</MenuItem>
                           <MenuItem value="Cancelled">Cancelled</MenuItem>
                           <MenuItem value="Returned">Returned</MenuItem>

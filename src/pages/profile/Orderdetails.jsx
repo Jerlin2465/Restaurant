@@ -1,6 +1,6 @@
+// src/pages/OrderDetails.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-
 import {
   Box,
   Card,
@@ -29,31 +29,57 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
 } from "@mui/material";
-
 import { styled } from "@mui/material/styles";
-
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import LocalShippingRoundedIcon from "@mui/icons-material/LocalShippingRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import CurrencyRupeeRoundedIcon from "@mui/icons-material/CurrencyRupeeRounded";
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
-import ArrowForwardIosRoundedIcon from "@mui/icons-material/ArrowForwardIosRounded";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import AssignmentReturnOutlinedIcon from "@mui/icons-material/AssignmentReturnOutlined";
-
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import PhoneIcon from "@mui/icons-material/Phone";
+import PersonIcon from "@mui/icons-material/Person";
 import { useNavigate } from "react-router-dom";
 
-const STEPS = ["Placed", "Processing", "Shipped", "Delivered"];
+// ── Full Order Status Flow ──
+const FULL_STEPS = [
+  "Placed",
+  "Processing",
+  "Ready",
+  "Out_for_Delivery",
+  "Delivered",
+];
 
 const STATUS_COLORS = {
   Placed: "#6366f1",
   Processing: "#f97316",
-  Shipped: "#0ea5e9",
+  Ready: "#4ade80",
+  Out_for_Delivery: "#fb923c",
   Delivered: "#10b981",
   Cancelled: "#ef4444",
   Returned: "#8b5cf6",
+};
+
+const STATUS_LABELS = {
+  Placed: "Order Placed",
+  Processing: "Cooking in Progress",
+  Ready: "Ready for Pickup",
+  Out_for_Delivery: "Out for Delivery",
+  Delivered: "Delivered",
+  Cancelled: "Cancelled",
+  Returned: "Returned",
+};
+
+const STATUS_ICONS = {
+  Placed: <ShoppingBagOutlinedIcon />,
+  Processing: <AutorenewRoundedIcon />,
+  Ready: <CheckCircleRoundedIcon />,
+  Out_for_Delivery: <LocalShippingRoundedIcon />,
+  Delivered: <CheckCircleRoundedIcon />,
 };
 
 const STEP_THEMES = {
@@ -77,15 +103,25 @@ const STEP_THEMES = {
     connectorActive: "#f97316",
     connectorInactive: "#fed7aa",
   },
-  Shipped: {
-    activeColor: "#0ea5e9",
-    completedColor: "#0284c7",
-    inactiveColor: "#bae6fd",
-    bg: "#f0f9ff",
-    border: "#bae6fd",
-    titleColor: "#0c4a6e",
-    connectorActive: "#0ea5e9",
-    connectorInactive: "#bae6fd",
+  Ready: {
+    activeColor: "#4ade80",
+    completedColor: "#22c55e",
+    inactiveColor: "#bbf7d0",
+    bg: "#f0fdf4",
+    border: "#bbf7d0",
+    titleColor: "#065f46",
+    connectorActive: "#4ade80",
+    connectorInactive: "#bbf7d0",
+  },
+  Out_for_Delivery: {
+    activeColor: "#fb923c",
+    completedColor: "#f97316",
+    inactiveColor: "#fed7aa",
+    bg: "#fff7ed",
+    border: "#fed7aa",
+    titleColor: "#7c2d12",
+    connectorActive: "#fb923c",
+    connectorInactive: "#fed7aa",
   },
   Delivered: {
     activeColor: "#10b981",
@@ -112,8 +148,9 @@ const STEP_THEMES = {
 const STEP_ICON_MAP = {
   1: <ShoppingBagOutlinedIcon fontSize="small" />,
   2: <AutorenewRoundedIcon fontSize="small" />,
-  3: <LocalShippingRoundedIcon fontSize="small" />,
-  4: <CheckCircleRoundedIcon fontSize="small" />,
+  3: <CheckCircleRoundedIcon fontSize="small" />,
+  4: <LocalShippingRoundedIcon fontSize="small" />,
+  5: <CheckCircleRoundedIcon fontSize="small" />,
 };
 
 const ColorConnector = styled(StepConnector)(
@@ -139,7 +176,6 @@ const CustomStepIcon = ({ active, completed, icon, theme }) => {
     : active
       ? theme.activeColor
       : theme.inactiveColor;
-
   return (
     <Avatar sx={{ width: 42, height: 42, bgcolor: color }}>
       {STEP_ICON_MAP[String(icon)]}
@@ -147,94 +183,7 @@ const CustomStepIcon = ({ active, completed, icon, theme }) => {
   );
 };
 
-const DeliveredBanner = () => (
-  <Fade in timeout={600}>
-    <Box
-      sx={{
-        mt: 2,
-        p: 2,
-        borderRadius: "20px",
-        bgcolor: "#ccf8e3",
-        border: "1px solid #5ce0ac",
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-      }}
-    >
-      <Avatar sx={{ bgcolor: "#10b981" }}>
-        <CheckCircleRoundedIcon />
-      </Avatar>
-      <Box>
-        <Typography fontWeight="bold" sx={{ color: "#065f46" }}>
-          Order Delivered Successfully
-        </Typography>
-        <Typography sx={{ color: "#047857", fontSize: "14px" }}>
-          Thank you for shopping with us
-        </Typography>
-      </Box>
-    </Box>
-  </Fade>
-);
-
-const CancelledBanner = () => (
-  <Fade in timeout={600}>
-    <Box
-      sx={{
-        mt: 2,
-        p: 2,
-        borderRadius: "20px",
-        bgcolor: "#fef2f2",
-        border: "1px solid #fecaca",
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-      }}
-    >
-      <Avatar sx={{ bgcolor: "#ef4444" }}>
-        <CancelOutlinedIcon />
-      </Avatar>
-      <Box>
-        <Typography fontWeight="bold" sx={{ color: "#7f1d1d" }}>
-          Order Cancelled
-        </Typography>
-        <Typography sx={{ color: "#b91c1c", fontSize: "14px" }}>
-          This order has been cancelled
-        </Typography>
-      </Box>
-    </Box>
-  </Fade>
-);
-
-const ReturnedBanner = () => (
-  <Fade in timeout={600}>
-    <Box
-      sx={{
-        mt: 2,
-        p: 2,
-        borderRadius: "20px",
-        bgcolor: "#f5f3ff",
-        border: "1px solid #ddd6fe",
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-      }}
-    >
-      <Avatar sx={{ bgcolor: "#8b5cf6" }}>
-        <AssignmentReturnOutlinedIcon />
-      </Avatar>
-      <Box>
-        <Typography fontWeight="bold" sx={{ color: "#4c1d95" }}>
-          Return Request Submitted
-        </Typography>
-        <Typography sx={{ color: "#6d28d9", fontSize: "14px" }}>
-          We will process your return shortly
-        </Typography>
-      </Box>
-    </Box>
-  </Fade>
-);
-
-// ── ONE CARD PER ORDER (shows all products as a list inside) ──────────────────
+// ── Order Card ──
 const OrderCard = ({ order, onRefresh }) => {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -242,15 +191,24 @@ const OrderCard = ({ order, onRefresh }) => {
   const [actionLoading, setActionLoading] = useState(false);
 
   const orderStatus = order.orderStatus || "Placed";
-  const activeStep = STEPS.indexOf(orderStatus);
+  const activeStep = FULL_STEPS.indexOf(orderStatus);
   const theme = STEP_THEMES[orderStatus] || STEP_THEMES["Placed"];
 
   const isDelivered = orderStatus === "Delivered";
   const isCancelled = orderStatus === "Cancelled";
   const isReturned = orderStatus === "Returned";
 
-  const showCancelBtn = !isDelivered && !isCancelled && !isReturned;
+  const showCancelBtn =
+    !isDelivered &&
+    !isCancelled &&
+    !isReturned &&
+    orderStatus !== "Out_for_Delivery";
   const showReturnBtn = isDelivered && !isReturned;
+
+  // Delivery info
+  const deliveryPerson = order.deliveryPersonId;
+  const deliveryStartedAt = order.deliveryStartedAt;
+  const deliveredAt = order.deliveredAt;
 
   const handleConfirm = (type) => {
     setConfirmType(type);
@@ -269,11 +227,8 @@ const OrderCard = ({ order, onRefresh }) => {
       await axios.put(
         endpoint,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-
       setConfirmOpen(false);
       onRefresh();
     } catch (error) {
@@ -286,7 +241,6 @@ const OrderCard = ({ order, onRefresh }) => {
 
   return (
     <>
-      {/* Confirmation Dialog */}
       <Dialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
@@ -330,20 +284,19 @@ const OrderCard = ({ order, onRefresh }) => {
         </DialogActions>
       </Dialog>
 
-      {/* Order Card */}
       <Card
         sx={{
           width: "100%",
-          maxWidth: "900px",
+          maxWidth: "950px",
           mx: "auto",
           borderRadius: "28px",
           overflow: "hidden",
           boxShadow: "0 8px 30px rgba(64, 25, 78, 0.23)",
-          backgroundColor: "#000",
+          bgcolor: "#0f172a",
         }}
       >
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          {/* ── ORDER HEADER ── */}
+          {/* Header */}
           <Box
             sx={{
               display: "flex",
@@ -360,19 +313,26 @@ const OrderCard = ({ order, onRefresh }) => {
               </Typography>
               <Typography
                 fontWeight="bold"
-                sx={{ color: "#ccc", fontSize: "13px" }}
+                sx={{ color: "#fff", fontSize: "13px" }}
               >
-                #{order._id}
+                #{order._id?.slice(-8).toUpperCase()}
               </Typography>
             </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                flexWrap: "wrap",
+              }}
+            >
               <Chip
                 label={order.paymentStatus}
                 color={order.paymentStatus === "Paid" ? "success" : "warning"}
                 size="small"
               />
               <Chip
-                label={orderStatus}
+                label={STATUS_LABELS[orderStatus] || orderStatus}
                 sx={{
                   bgcolor: `${STATUS_COLORS[orderStatus] || "#6b7280"}20`,
                   color: STATUS_COLORS[orderStatus] || "#6b7280",
@@ -385,29 +345,110 @@ const OrderCard = ({ order, onRefresh }) => {
 
           <Divider sx={{ borderColor: "#1e293b", mb: 2 }} />
 
-          {/* ── PRODUCT LIST TABLE ── */}
+          {/* Delivery Info - Only show if Out for Delivery or Delivered */}
+          {(orderStatus === "Out_for_Delivery" ||
+            orderStatus === "Delivered") &&
+            deliveryPerson && (
+              <Box sx={{ mb: 2, p: 1.5, bgcolor: "#1e293b", borderRadius: 2 }}>
+                <Typography
+                  sx={{
+                    color: "#facc15",
+                    fontWeight: 600,
+                    fontSize: 13,
+                    mb: 1,
+                  }}
+                >
+                  🚚 Delivery Details
+                </Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <PersonIcon sx={{ color: "#94a3b8", fontSize: 16 }} />
+                    <Typography sx={{ color: "#e2e8f0", fontSize: 13 }}>
+                      {deliveryPerson?.fullname ||
+                        deliveryPerson?.name ||
+                        "Delivery Partner"}
+                    </Typography>
+                  </Box>
+                  {deliveryPerson?.phone && (
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
+                      <PhoneIcon sx={{ color: "#94a3b8", fontSize: 16 }} />
+                      <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                        {deliveryPerson.phone}
+                      </Typography>
+                    </Box>
+                  )}
+                  {deliveryStartedAt && (
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
+                      <LocalShippingRoundedIcon
+                        sx={{ color: "#94a3b8", fontSize: 16 }}
+                      />
+                      <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                        Started: {new Date(deliveryStartedAt).toLocaleString()}
+                      </Typography>
+                    </Box>
+                  )}
+                  {deliveredAt && (
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
+                      <CheckCircleRoundedIcon
+                        sx={{ color: "#4ade80", fontSize: 16 }}
+                      />
+                      <Typography sx={{ color: "#4ade80", fontSize: 13 }}>
+                        Delivered: {new Date(deliveredAt).toLocaleString()}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+          {/* Address */}
+          {order.deliveryAddress && (
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                mb: 2,
+                p: 1.5,
+                bgcolor: "#1e293b",
+                borderRadius: 2,
+              }}
+            >
+              <LocationOnIcon sx={{ color: "#64748b", fontSize: 16 }} />
+              <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                {order.deliveryAddress}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Products Table */}
           <TableContainer
             component={Paper}
             elevation={0}
-            sx={{ bgcolor: "#0f172a", borderRadius: "16px", mb: 2 }}
+            sx={{ bgcolor: "#1e293b", borderRadius: "16px", mb: 2 }}
           >
             <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell
                     sx={{
-                      color: "#64748b",
+                      color: "#94a3b8",
                       fontWeight: "bold",
-                      borderBottom: "1px solid #1e293b",
+                      borderBottom: "1px solid #334155",
                     }}
                   >
                     Product
                   </TableCell>
                   <TableCell
                     sx={{
-                      color: "#64748b",
+                      color: "#94a3b8",
                       fontWeight: "bold",
-                      borderBottom: "1px solid #1e293b",
+                      borderBottom: "1px solid #334155",
                     }}
                   >
                     Name
@@ -415,9 +456,9 @@ const OrderCard = ({ order, onRefresh }) => {
                   <TableCell
                     align="center"
                     sx={{
-                      color: "#64748b",
+                      color: "#94a3b8",
                       fontWeight: "bold",
-                      borderBottom: "1px solid #1e293b",
+                      borderBottom: "1px solid #334155",
                     }}
                   >
                     Price
@@ -425,9 +466,9 @@ const OrderCard = ({ order, onRefresh }) => {
                   <TableCell
                     align="center"
                     sx={{
-                      color: "#64748b",
+                      color: "#94a3b8",
                       fontWeight: "bold",
-                      borderBottom: "1px solid #1e293b",
+                      borderBottom: "1px solid #334155",
                     }}
                   >
                     Qty
@@ -435,9 +476,9 @@ const OrderCard = ({ order, onRefresh }) => {
                   <TableCell
                     align="right"
                     sx={{
-                      color: "#64748b",
+                      color: "#94a3b8",
                       fontWeight: "bold",
-                      borderBottom: "1px solid #1e293b",
+                      borderBottom: "1px solid #334155",
                     }}
                   >
                     Total
@@ -449,21 +490,19 @@ const OrderCard = ({ order, onRefresh }) => {
                   const product = item.productId;
                   const price = product?.price || 0;
                   const lineTotal = price * item.quantity;
-
                   return (
                     <TableRow
                       key={index}
                       sx={{
                         "&:last-child td": { borderBottom: 0 },
                         cursor: "pointer",
-                        "&:hover": { bgcolor: "#1e293b" },
+                        "&:hover": { bgcolor: "#2d3748" },
                         transition: "background 0.15s",
                       }}
                       onClick={() => navigate(`/product/${product?._id}`)}
                     >
-                      {/* Image */}
                       <TableCell
-                        sx={{ borderBottom: "1px solid #1e293b", py: 1.5 }}
+                        sx={{ borderBottom: "1px solid #334155", py: 1.5 }}
                       >
                         <Box
                           component="img"
@@ -482,21 +521,17 @@ const OrderCard = ({ order, onRefresh }) => {
                           }}
                         />
                       </TableCell>
-
-                      {/* Name */}
-                      <TableCell sx={{ borderBottom: "1px solid #1e293b" }}>
+                      <TableCell sx={{ borderBottom: "1px solid #334155" }}>
                         <Typography
                           fontWeight="bold"
-                          sx={{ color: "#ccc", fontSize: "14px" }}
+                          sx={{ color: "#e2e8f0", fontSize: "14px" }}
                         >
                           {product?.name || "—"}
                         </Typography>
                       </TableCell>
-
-                      {/* Unit price */}
                       <TableCell
                         align="center"
-                        sx={{ borderBottom: "1px solid #1e293b" }}
+                        sx={{ borderBottom: "1px solid #334155" }}
                       >
                         <Typography
                           sx={{
@@ -512,32 +547,28 @@ const OrderCard = ({ order, onRefresh }) => {
                           {price}
                         </Typography>
                       </TableCell>
-
-                      {/* Quantity */}
                       <TableCell
                         align="center"
-                        sx={{ borderBottom: "1px solid #1e293b" }}
+                        sx={{ borderBottom: "1px solid #334155" }}
                       >
                         <Chip
                           label={`× ${item.quantity}`}
                           size="small"
                           sx={{
-                            bgcolor: "#1e293b",
+                            bgcolor: "#334155",
                             color: "#94a3b8",
                             fontWeight: "bold",
                           }}
                         />
                       </TableCell>
-
-                      {/* Line total */}
                       <TableCell
                         align="right"
-                        sx={{ borderBottom: "1px solid #1e293b" }}
+                        sx={{ borderBottom: "1px solid #334155" }}
                       >
                         <Typography
                           fontWeight="bold"
                           sx={{
-                            color: "#2563eb",
+                            color: "#60a5fa",
                             fontSize: "15px",
                             display: "flex",
                             alignItems: "center",
@@ -556,11 +587,9 @@ const OrderCard = ({ order, onRefresh }) => {
             </Table>
           </TableContainer>
 
-          {/* ── ORDER TOTAL ── */}
-
           <Divider sx={{ borderColor: "#1e293b", mb: 2 }} />
 
-          {/* ── ACTION BUTTONS ── */}
+          {/* Actions */}
           <Stack
             direction="row"
             spacing={2}
@@ -577,19 +606,19 @@ const OrderCard = ({ order, onRefresh }) => {
                   px: 3,
                   py: 1.5,
                   borderRadius: "14px",
-                  bgcolor: "#0f172a",
+                  bgcolor: "#1e293b",
                   display: "flex",
                   alignItems: "center",
                   gap: 1,
                 }}
               >
-                <Typography sx={{ color: "#8a94a8", fontSize: "14px" }}>
+                <Typography sx={{ color: "#94a3b8", fontSize: "14px" }}>
                   Order Total:
                 </Typography>
                 <Typography
                   fontWeight="bold"
                   sx={{
-                    color: "#2563eb",
+                    color: "#60a5fa",
                     fontSize: "20px",
                     display: "flex",
                     alignItems: "center",
@@ -600,43 +629,45 @@ const OrderCard = ({ order, onRefresh }) => {
                 </Typography>
               </Paper>
             </Box>
-            {showCancelBtn && (
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<CancelOutlinedIcon />}
-                sx={{
-                  borderRadius: "14px",
-                  textTransform: "none",
-                  px: 3,
-                  py: 1.2,
-                  fontWeight: "bold",
-                }}
-                onClick={() => handleConfirm("cancel")}
-              >
-                Cancel Order
-              </Button>
-            )}
-            {showReturnBtn && (
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<AssignmentReturnOutlinedIcon />}
-                sx={{
-                  borderRadius: "14px",
-                  textTransform: "none",
-                  px: 3,
-                  py: 1.2,
-                  fontWeight: "bold",
-                }}
-                onClick={() => handleConfirm("return")}
-              >
-                Return Order
-              </Button>
-            )}
+            <Box sx={{ display: "flex", gap: 1 }}>
+              {showCancelBtn && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<CancelOutlinedIcon />}
+                  sx={{
+                    borderRadius: "14px",
+                    textTransform: "none",
+                    px: 3,
+                    py: 1.2,
+                    fontWeight: "bold",
+                  }}
+                  onClick={() => handleConfirm("cancel")}
+                >
+                  Cancel Order
+                </Button>
+              )}
+              {showReturnBtn && (
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<AssignmentReturnOutlinedIcon />}
+                  sx={{
+                    borderRadius: "14px",
+                    textTransform: "none",
+                    px: 3,
+                    py: 1.2,
+                    fontWeight: "bold",
+                  }}
+                  onClick={() => handleConfirm("return")}
+                >
+                  Return Order
+                </Button>
+              )}
+            </Box>
           </Stack>
 
-          {/* ── TRACKING STEPPER ── */}
+          {/* Tracking Stepper */}
           {!isDelivered && !isCancelled && !isReturned && (
             <Box
               sx={{
@@ -664,31 +695,154 @@ const OrderCard = ({ order, onRefresh }) => {
                   />
                 }
               >
-                {STEPS.map((label, i) => (
+                {FULL_STEPS.map((label, i) => (
                   <Step key={label} completed={i < activeStep}>
                     <StepLabel
                       StepIconComponent={(props) => (
                         <CustomStepIcon {...props} theme={theme} />
                       )}
                     >
-                      {label}
+                      <Typography sx={{ fontSize: "11px", fontWeight: 500 }}>
+                        {STATUS_LABELS[label]}
+                      </Typography>
                     </StepLabel>
                   </Step>
                 ))}
               </Stepper>
+              {/* Status Time Stamps */}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mt: 1,
+                  px: 1,
+                  flexWrap: "wrap",
+                  gap: 0.5,
+                }}
+              >
+                {FULL_STEPS.map((step, i) => {
+                  const stepTime = order[`${step.toLowerCase()}At`];
+                  return (
+                    <Box
+                      key={step}
+                      sx={{ textAlign: "center", flex: 1, minWidth: "60px" }}
+                    >
+                      <Typography
+                        sx={{
+                          color:
+                            i <= activeStep ? STATUS_COLORS[step] : "#94a3b8",
+                          fontSize: "10px",
+                          fontWeight: i <= activeStep ? 600 : 400,
+                        }}
+                      >
+                        {stepTime
+                          ? new Date(stepTime).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : i < activeStep
+                            ? "✓"
+                            : "—"}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
             </Box>
           )}
 
-          {isDelivered && !isReturned && <DeliveredBanner />}
-          {isCancelled && <CancelledBanner />}
-          {isReturned && <ReturnedBanner />}
+          {/* Status Banners */}
+          {isDelivered && !isReturned && (
+            <Fade in timeout={600}>
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: "20px",
+                  bgcolor: "#ccf8e3",
+                  border: "1px solid #5ce0ac",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <Avatar sx={{ bgcolor: "#10b981" }}>
+                  <CheckCircleRoundedIcon />
+                </Avatar>
+                <Box>
+                  <Typography fontWeight="bold" sx={{ color: "#065f46" }}>
+                    Order Delivered Successfully
+                  </Typography>
+                  <Typography sx={{ color: "#047857", fontSize: "14px" }}>
+                    Thank you for shopping with us
+                  </Typography>
+                </Box>
+              </Box>
+            </Fade>
+          )}
+          {isCancelled && (
+            <Fade in timeout={600}>
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: "20px",
+                  bgcolor: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <Avatar sx={{ bgcolor: "#ef4444" }}>
+                  <CancelOutlinedIcon />
+                </Avatar>
+                <Box>
+                  <Typography fontWeight="bold" sx={{ color: "#7f1d1d" }}>
+                    Order Cancelled
+                  </Typography>
+                  <Typography sx={{ color: "#b91c1c", fontSize: "14px" }}>
+                    This order has been cancelled
+                  </Typography>
+                </Box>
+              </Box>
+            </Fade>
+          )}
+          {isReturned && (
+            <Fade in timeout={600}>
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: "20px",
+                  bgcolor: "#f5f3ff",
+                  border: "1px solid #ddd6fe",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <Avatar sx={{ bgcolor: "#8b5cf6" }}>
+                  <AssignmentReturnOutlinedIcon />
+                </Avatar>
+                <Box>
+                  <Typography fontWeight="bold" sx={{ color: "#4c1d95" }}>
+                    Return Request Submitted
+                  </Typography>
+                  <Typography sx={{ color: "#6d28d9", fontSize: "14px" }}>
+                    We will process your return shortly
+                  </Typography>
+                </Box>
+              </Box>
+            </Fade>
+          )}
         </CardContent>
       </Card>
     </>
   );
 };
 
-// ── MAIN COMPONENT ────────────────────────────────────────────────────────────
+// ── Main Component ──
 const OrderDetails = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -701,15 +855,11 @@ const OrderDetails = () => {
         navigate("/login");
         return;
       }
-
       const res = await axios.get(
         `${import.meta.env.VITE_API_URL}/order/my-orders`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-
-      if (res.data.success) {
-        setOrders(res.data.orders);
-      }
+      if (res.data.success) setOrders(res.data.orders);
     } catch (error) {
       console.error(error);
       alert(error?.response?.data?.message || "Something went wrong");
@@ -724,7 +874,7 @@ const OrderDetails = () => {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) {
+  if (loading)
     return (
       <Box
         sx={{
@@ -732,53 +882,54 @@ const OrderDetails = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
+          bgcolor: "#0f172a",
         }}
       >
-        <CircularProgress size={45} />
+        <CircularProgress size={45} sx={{ color: "#facc15" }} />
       </Box>
     );
-  }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "#0f172a",
-        p: { xs: 2, md: 5 },
-        borderRadius: 8,
-      }}
-    >
-      {/* Header */}
+    <Box sx={{ minHeight: "100vh", bgcolor: "#0f172a", p: { xs: 2, md: 5 } }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" sx={{ color: "#ccc" }}>
+        <Typography variant="h4" fontWeight="bold" sx={{ color: "#fff" }}>
           My Orders
         </Typography>
         <Typography sx={{ mt: 1, color: "#8a94a8" }}>
           Track your orders easily
         </Typography>
       </Box>
-
-      {/* Empty state */}
       {orders.length === 0 ? (
         <Paper
           elevation={0}
-          sx={{ p: 3, borderRadius: "24px", textAlign: "center" }}
+          sx={{
+            p: 3,
+            borderRadius: "24px",
+            textAlign: "center",
+            bgcolor: "#1e293b",
+          }}
         >
           <Inventory2RoundedIcon
             sx={{ fontSize: 60, color: "#cbd5e1", mb: 2 }}
           />
-          <Typography variant="h5" fontWeight="bold">
+          <Typography variant="h5" fontWeight="bold" sx={{ color: "#fff" }}>
             No Orders Found
           </Typography>
           <Button
             onClick={() => navigate("/menu")}
-            sx={{ backgroundColor: "#000", color: "#fff", mt: 3, px: 4 }}
+            sx={{
+              bgcolor: "#facc15",
+              color: "#000",
+              mt: 3,
+              px: 4,
+              fontWeight: 700,
+              "&:hover": { bgcolor: "#eab308" },
+            }}
           >
             Go To Shop
           </Button>
         </Paper>
       ) : (
-        // ── ONE CARD PER ORDER (not per product) ──
         <Stack spacing={4}>
           {orders.map((order) => (
             <OrderCard key={order._id} order={order} onRefresh={getOrders} />

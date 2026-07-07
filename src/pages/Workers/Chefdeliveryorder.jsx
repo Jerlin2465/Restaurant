@@ -157,7 +157,7 @@ const DeliveryOrderCard = ({ order, onUpdateStatus }) => {
         </Box>
 
         {/* Delivery Address */}
-        {address && address !== "Address not provided" ? (
+        {/* {address && address !== "Address not provided" ? (
           <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
             <LocationOnIcon sx={{ color: "#64748b", fontSize: 16 }} />
             <Typography sx={{ color: "#94a3b8", fontSize: 12 }}>
@@ -173,7 +173,7 @@ const DeliveryOrderCard = ({ order, onUpdateStatus }) => {
               Dine-in / Pickup Order (No delivery address)
             </Typography>
           </Box>
-        )}
+        )} */}
 
         <Divider sx={{ borderColor: "#1f2937", mb: 1.5 }} />
 
@@ -196,8 +196,8 @@ const DeliveryOrderCard = ({ order, onUpdateStatus }) => {
                   : "none",
             }}
           >
-            <Typography sx={{ color: "#e5e7eb", fontSize: 13 }}>
-              {item.productId?.productName ||
+            <Typography sx={{ color: "#e5e7eb", fontSize: 15 }}>
+              {item.productId?.productname ||
                 item.productId?.name ||
                 item.name ||
                 "Unknown"}
@@ -209,7 +209,7 @@ const DeliveryOrderCard = ({ order, onUpdateStatus }) => {
                 bgcolor: "#0f172a",
                 color: "#facc15",
                 fontWeight: 700,
-                fontSize: 11,
+                fontSize: 13,
                 height: 20,
               }}
             />
@@ -334,8 +334,15 @@ const Chefdeliveryorder = () => {
         },
       });
       const allOrders = res.data.orders || res.data.data || [];
+      console.log(
+        "First order's first product item:",
+        JSON.stringify(
+          allOrders[0]?.products?.[0] || allOrders[0]?.items?.[0],
+          null,
+          2,
+        ),
+      );
 
-      
       // Filter only delivery orders (orders with delivery address)
       const deliveryOrders = allOrders.filter(
         (order) =>
