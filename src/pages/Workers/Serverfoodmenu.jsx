@@ -1,3 +1,5 @@
+// frontend/src/pages/Workers/Serverfoodmenu.jsx
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
@@ -21,14 +23,29 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import TableRestaurantIcon from "@mui/icons-material/TableRestaurant";
 import SendIcon from "@mui/icons-material/Send";
+import { jwtDecode } from "jwt-decode";
 
 const API = import.meta.env.VITE_API_URL;
+
+// ─── Helper: get current logged-in server ID from JWT ────────────────────────
+const getCurrentServerId = () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    const decoded = jwtDecode(token);
+    return decoded?._id || decoded?.id || null;
+  } catch {
+    return null;
+  }
+};
 
 const Serverfoodmenu = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sendingOrder, setSendingOrder] = useState(false);
   const [filter, setFilter] = useState("All");
+  const [currentTable, setCurrentTable] = useState(null);
+  const [tableLoading, setTableLoading] = useState(true);
 
   const [cart, setCart] = useState({});
 
@@ -37,6 +54,48 @@ const Serverfoodmenu = () => {
     message: "",
     severity: "info",
   });
+
+  // ─── Fetch current server's active table ────────────────────────────────────
+  const fetchCurrentTable = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const serverId = getCurrentServerId();
+
+      if (!serverId) {
+        setTableLoading(false);
+        return;
+      }
+
+      const res = await axios.get(`${API}/table`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.data.success) {
+        // Find the active table assigned to this server
+        const activeTable = res.data.bookings.find(
+          (b) =>
+            b.assignedServer &&
+            String(b.assignedServer._id || b.assignedServer) ===
+              String(serverId) &&
+            b.status !== "Completed" &&
+            b.status !== "Cancelled",
+        );
+
+        if (activeTable) {
+          setCurrentTable(activeTable);
+          // Store table number in localStorage for other components
+          localStorage.setItem("tableNumber", activeTable.tableNumber);
+        } else {
+          setCurrentTable(null);
+          localStorage.removeItem("tableNumber");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching table:", error);
+    } finally {
+      setTableLoading(false);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -61,9 +120,20 @@ const Serverfoodmenu = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchCurrentTable();
   }, []);
 
+  // ─── Add to Cart ─────────────────────────────────────────────────────────────
   const addToCart = (product) => {
+    if (!currentTable) {
+      setSnack({
+        open: true,
+        message: "You don't have an active table. Please take a table first.",
+        severity: "warning",
+      });
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev[product._id];
       return {
@@ -115,6 +185,7 @@ const Serverfoodmenu = () => {
   );
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  // ─── Send Order to Chef ─────────────────────────────────────────────────────
   const sendOrderToChef = async () => {
     if (cartItems.length === 0) {
       setSnack({
@@ -125,12 +196,26 @@ const Serverfoodmenu = () => {
       return;
     }
 
+    if (!currentTable) {
+      setSnack({
+        open: true,
+        message: "You don't have an active table. Please take a table first.",
+        severity: "warning",
+      });
+      return;
+    }
+
     setSendingOrder(true);
     try {
-      const tableNumber = String(localStorage.getItem("tableNumber") || "1");
+      // Use the current table's table number
+      const tableNumber = String(currentTable.tableNumber);
+
+      // Get the booking ID to link the order
+      const bookingId = currentTable._id;
 
       const orderPayload = {
         tableNumber,
+        bookingId,
         items: cartItems.map((item) => ({
           productId: item.productId,
           name: item.name,
@@ -147,10 +232,12 @@ const Serverfoodmenu = () => {
       if (res.data.success) {
         setSnack({
           open: true,
-          message: `Order sent to chef! (${cartCount} item${cartCount > 1 ? "s" : ""})`,
+          message: `Order sent to chef! (${cartCount} item${cartCount > 1 ? "s" : ""}) for Table #${tableNumber}`,
           severity: "success",
         });
         setCart({});
+        // Refresh table data to update order count
+        fetchCurrentTable();
       }
     } catch (error) {
       setSnack({
@@ -162,6 +249,7 @@ const Serverfoodmenu = () => {
       setSendingOrder(false);
     }
   };
+
   const filteredProducts =
     filter === "All"
       ? products
@@ -169,14 +257,13 @@ const Serverfoodmenu = () => {
           (item) => item.category?.toLowerCase() === filter.toLowerCase(),
         );
 
-  const tableNumber = localStorage.getItem("tableNumber");
-
-  if (loading)
+  // ─── Loading States ──────────────────────────────────────────────────────────
+  if (loading || tableLoading)
     return (
       <Box textAlign="center" mt={8}>
         <CircularProgress sx={{ color: "#facc15" }} />
         <Typography sx={{ color: "#9ca3af", mt: 2 }}>
-          Loading menu...
+          {loading ? "Loading menu..." : "Loading table info..."}
         </Typography>
       </Box>
     );
@@ -192,27 +279,62 @@ const Serverfoodmenu = () => {
     >
       {/* ---------- LEFT: MENU ---------- */}
       <Box sx={{ flex: 1, p: 3, minWidth: 0 }}>
-        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            flexWrap: "wrap",
+          }}
+        >
           <Typography variant="h4" sx={{ color: "#fff", fontWeight: 700 }}>
             🍽️ Food Menu
           </Typography>
-          {tableNumber && (
+
+          {currentTable ? (
             <Chip
               icon={
                 <TableRestaurantIcon
-                  sx={{ color: "#60a5fa !important", fontSize: 16 }}
+                  sx={{ color: "#4ade80 !important", fontSize: 16 }}
                 />
               }
-              label={`Table #${tableNumber}`}
+              label={`Table #${currentTable.tableNumber} - ${currentTable.fullName}`}
               sx={{
-                bgcolor: "#1e3a5f",
-                color: "#60a5fa",
+                bgcolor: "#14532d",
+                color: "#4ade80",
                 fontWeight: 700,
-                border: "1px solid #60a5fa44",
+                border: "1px solid #4ade8044",
+              }}
+            />
+          ) : (
+            <Chip
+              icon={
+                <TableRestaurantIcon
+                  sx={{ color: "#f87171 !important", fontSize: 16 }}
+                />
+              }
+              label="No Active Table"
+              sx={{
+                bgcolor: "#451a1a",
+                color: "#f87171",
+                fontWeight: 700,
+                border: "1px solid #f8717144",
               }}
             />
           )}
         </Box>
+
+        {/* Show warning if no active table */}
+        {!currentTable && (
+          <Alert
+            severity="warning"
+            sx={{ mb: 3, bgcolor: "#451a1a", color: "#f87171" }}
+          >
+            You don't have an active table. Please go to "Table Reservations"
+            and take a table first.
+          </Alert>
+        )}
 
         {/* ---------- FILTER BUTTONS ---------- */}
         <Box
@@ -318,16 +440,19 @@ const Serverfoodmenu = () => {
                       fullWidth
                       variant="contained"
                       startIcon={<ShoppingCartIcon />}
+                      disabled={!currentTable}
                       sx={{
                         mt: 2,
-                        bgcolor: "#facc15",
-                        color: "#000",
+                        bgcolor: currentTable ? "#facc15" : "#374151",
+                        color: currentTable ? "#000" : "#6b7280",
                         fontWeight: 700,
-                        "&:hover": { bgcolor: "#fbbf24" },
+                        "&:hover": {
+                          bgcolor: currentTable ? "#fbbf24" : "#374151",
+                        },
                       }}
                       onClick={() => addToCart(product)}
                     >
-                      Add to Order
+                      {currentTable ? "Add to Order" : "No Active Table"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -373,6 +498,18 @@ const Serverfoodmenu = () => {
         </Box>
 
         <Divider sx={{ borderColor: "#1f2937", mb: 2 }} />
+
+        {/* Show table info in order sidebar */}
+        {currentTable && (
+          <Box sx={{ mb: 2, bgcolor: "#1f2937", p: 1.5, borderRadius: 2 }}>
+            <Typography sx={{ color: "#9ca3af", fontSize: 12 }}>
+              Table #{currentTable.tableNumber}
+            </Typography>
+            <Typography sx={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>
+              {currentTable.fullName}
+            </Typography>
+          </Box>
+        )}
 
         {/* Scrollable cart items list */}
         <Box sx={{ flex: 1, overflowY: "auto", pr: 0.5 }}>
@@ -494,14 +631,16 @@ const Serverfoodmenu = () => {
           <Button
             fullWidth
             variant="contained"
-            disabled={cartItems.length === 0 || sendingOrder}
+            disabled={cartItems.length === 0 || sendingOrder || !currentTable}
             startIcon={<SendIcon />}
             sx={{
-              bgcolor: "#facc15",
-              color: "#000",
+              bgcolor: currentTable ? "#facc15" : "#374151",
+              color: currentTable ? "#000" : "#6b7280",
               fontWeight: 700,
               py: 1.2,
-              "&:hover": { bgcolor: "#fbbf24" },
+              "&:hover": {
+                bgcolor: currentTable ? "#fbbf24" : "#374151",
+              },
               "&.Mui-disabled": {
                 bgcolor: "#374151",
                 color: "#6b7280",
@@ -509,14 +648,18 @@ const Serverfoodmenu = () => {
             }}
             onClick={sendOrderToChef}
           >
-            {sendingOrder ? "Sending..." : "Send Order to Chef"}
+            {!currentTable
+              ? "No Active Table"
+              : sendingOrder
+                ? "Sending..."
+                : "Send Order to Chef"}
           </Button>
         </Box>
       </Box>
 
       <Snackbar
         open={snack.open}
-        autoHideDuration={2000}
+        autoHideDuration={3000}
         onClose={() => setSnack((p) => ({ ...p, open: false }))}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >

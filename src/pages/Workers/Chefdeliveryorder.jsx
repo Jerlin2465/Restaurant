@@ -237,7 +237,6 @@ const DeliveryOrderCard = ({ order, onUpdateStatus }) => {
           {status === "Placed" && (
             <Button
               variant="contained"
-              startIcon={<WhatshotIcon />}
               disabled={busy}
               sx={{
                 bgcolor: "#f97316",
@@ -255,7 +254,6 @@ const DeliveryOrderCard = ({ order, onUpdateStatus }) => {
           {status === "Processing" && (
             <Stack direction="row" spacing={1} alignItems="center">
               <Chip
-                icon={<WhatshotIcon />}
                 label="Cooking"
                 sx={{
                   bgcolor: "#f9731622",
@@ -266,7 +264,6 @@ const DeliveryOrderCard = ({ order, onUpdateStatus }) => {
 
               <Button
                 variant="contained"
-                startIcon={<CheckCircleIcon />}
                 disabled={busy}
                 sx={{
                   bgcolor: "#22c55e",
@@ -284,7 +281,6 @@ const DeliveryOrderCard = ({ order, onUpdateStatus }) => {
           {/* 3. Ready */}
           {status === "Ready" && (
             <Chip
-              icon={<LocalShippingIcon />}
               label="Waiting for Pickup"
               sx={{
                 bgcolor: "#3b82f622",

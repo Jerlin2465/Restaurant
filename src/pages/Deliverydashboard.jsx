@@ -296,7 +296,7 @@ const DeliveryOrderCard = ({
           )}
         </Box>
 
-        {/* ✅ FIXED: Delivery Partner with proper data */}
+        {/* ✅ FIXED: Delivery Partner with proper data
         {order.deliveryPersonId && (
           <Box sx={{ mb: 2 }}>
             <Typography sx={{ color: "#22c55e", fontWeight: "bold" }}>
@@ -307,7 +307,7 @@ const DeliveryOrderCard = ({
               {deliveryPersonPhone}
             </Typography>
           </Box>
-        )}
+        )} */}
 
         <Divider sx={{ borderColor: "#1f2937", mb: 1.5 }} />
 

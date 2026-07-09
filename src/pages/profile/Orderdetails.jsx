@@ -29,7 +29,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tooltip,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
@@ -205,10 +204,23 @@ const OrderCard = ({ order, onRefresh }) => {
     orderStatus !== "Out_for_Delivery";
   const showReturnBtn = isDelivered && !isReturned;
 
-  // Delivery info
+  // Get delivery person data from deliveryPersonId
   const deliveryPerson = order.deliveryPersonId;
   const deliveryStartedAt = order.deliveryStartedAt;
   const deliveredAt = order.deliveredAt;
+
+  const deliveryPersonName =
+    deliveryPerson?.fullname ||
+    deliveryPerson?.name ||
+    deliveryPerson?.username ||
+    "Not Assigned";
+  const deliveryPersonPhone =
+    deliveryPerson?.phone ||
+    deliveryPerson?.number ||
+    deliveryPerson?.contactNumber ||
+    "N/A";
+
+  const isDeliveryAssigned = !!deliveryPerson;
 
   const handleConfirm = (type) => {
     setConfirmType(type);
@@ -284,560 +296,618 @@ const OrderCard = ({ order, onRefresh }) => {
         </DialogActions>
       </Dialog>
 
-      <Card
+      {/* ✅ Centered Card with flex container */}
+      <Box
         sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
           width: "100%",
-          maxWidth: "950px",
-          mx: "auto",
-          borderRadius: "28px",
-          overflow: "hidden",
-          boxShadow: "0 8px 30px rgba(64, 25, 78, 0.23)",
-          bgcolor: "#0f172a",
         }}
       >
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          {/* Header */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 1,
-              mb: 2,
-            }}
-          >
-            <Box>
-              <Typography variant="caption" sx={{ color: "#8a94a8" }}>
-                Order ID
-              </Typography>
-              <Typography
-                fontWeight="bold"
-                sx={{ color: "#fff", fontSize: "13px" }}
-              >
-                #{order._id?.slice(-8).toUpperCase()}
-              </Typography>
-            </Box>
+        <Card
+          sx={{
+            width: "100%",
+            maxWidth: "850px",
+            borderRadius: "28px",
+            overflow: "hidden",
+            boxShadow: "0 8px 30px rgba(64, 25, 78, 0.23)",
+            bgcolor: "#0f172a",
+          }}
+        >
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            {/* Header */}
             <Box
               sx={{
                 display: "flex",
+                justifyContent: "space-between",
                 alignItems: "center",
-                gap: 1.5,
                 flexWrap: "wrap",
+                gap: 1,
+                mb: 2,
               }}
             >
-              <Chip
-                label={order.paymentStatus}
-                color={order.paymentStatus === "Paid" ? "success" : "warning"}
-                size="small"
-              />
-              <Chip
-                label={STATUS_LABELS[orderStatus] || orderStatus}
-                sx={{
-                  bgcolor: `${STATUS_COLORS[orderStatus] || "#6b7280"}20`,
-                  color: STATUS_COLORS[orderStatus] || "#6b7280",
-                  fontWeight: "bold",
-                  border: `1px solid ${STATUS_COLORS[orderStatus] || "#6b7280"}40`,
-                }}
-              />
-            </Box>
-          </Box>
-
-          <Divider sx={{ borderColor: "#1e293b", mb: 2 }} />
-
-          {/* Delivery Info - Only show if Out for Delivery or Delivered */}
-          {(orderStatus === "Out_for_Delivery" ||
-            orderStatus === "Delivered") &&
-            deliveryPerson && (
-              <Box sx={{ mb: 2, p: 1.5, bgcolor: "#1e293b", borderRadius: 2 }}>
+              <Box>
+                <Typography variant="caption" sx={{ color: "#8a94a8" }}>
+                  Order ID
+                </Typography>
                 <Typography
+                  fontWeight="bold"
+                  sx={{ color: "#fff", fontSize: "13px" }}
+                >
+                  #{order._id?.slice(-8).toUpperCase()}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  flexWrap: "wrap",
+                }}
+              >
+                <Chip
+                  label={order.paymentStatus}
+                  color={order.paymentStatus === "Paid" ? "success" : "warning"}
+                  size="small"
+                />
+                <Chip
+                  label={STATUS_LABELS[orderStatus] || orderStatus}
                   sx={{
-                    color: "#facc15",
-                    fontWeight: 600,
-                    fontSize: 13,
-                    mb: 1,
+                    bgcolor: `${STATUS_COLORS[orderStatus] || "#6b7280"}20`,
+                    color: STATUS_COLORS[orderStatus] || "#6b7280",
+                    fontWeight: "bold",
+                    border: `1px solid ${STATUS_COLORS[orderStatus] || "#6b7280"}40`,
+                  }}
+                />
+              </Box>
+            </Box>
+
+            <Divider sx={{ borderColor: "#1e293b", mb: 2 }} />
+
+            {/* Delivery Info - Show when assigned (Ready, Out_for_Delivery) but hide when Delivered */}
+            {isDeliveryAssigned &&
+              !isDelivered &&
+              !isCancelled &&
+              !isReturned && (
+                <Box
+                  sx={{ mb: 2, p: 1.5, bgcolor: "#1e293b", borderRadius: 2 }}
+                >
+                  <Typography
+                    sx={{
+                      color: "#facc15",
+                      fontWeight: 600,
+                      fontSize: 13,
+                      mb: 1,
+                    }}
+                  >
+                    🚚 Delivery Partner
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
+                      <PersonIcon sx={{ color: "#94a3b8", fontSize: 16 }} />
+                      <Typography sx={{ color: "#e2e8f0", fontSize: 13 }}>
+                        {deliveryPersonName}
+                      </Typography>
+                    </Box>
+                    {deliveryPersonPhone !== "N/A" && (
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                      >
+                        <PhoneIcon sx={{ color: "#94a3b8", fontSize: 16 }} />
+                        <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                          {deliveryPersonPhone}
+                        </Typography>
+                      </Box>
+                    )}
+                    {orderStatus === "Out_for_Delivery" &&
+                      deliveryStartedAt && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          <LocalShippingRoundedIcon
+                            sx={{ color: "#94a3b8", fontSize: 16 }}
+                          />
+                          <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                            Started:{" "}
+                            {new Date(deliveryStartedAt).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      )}
+                    {orderStatus === "Out_for_Delivery" && (
+                      <Chip
+                        label="Out for Delivery"
+                        size="small"
+                        sx={{
+                          bgcolor: "#fb923c22",
+                          color: "#fb923c",
+                          fontWeight: 600,
+                        }}
+                      />
+                    )}
+                    {orderStatus === "Ready" && (
+                      <Chip
+                        label="Ready for Pickup"
+                        size="small"
+                        sx={{
+                          bgcolor: "#4ade8022",
+                          color: "#4ade80",
+                          fontWeight: 600,
+                        }}
+                      />
+                    )}
+                  </Box>
+
+                  {/* Address inside delivery section */}
+                  {order.deliveryAddress && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        mt: 1.5,
+                        pt: 1.5,
+                        borderTop: "1px solid #334155",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <LocationOnIcon
+                        sx={{ color: "#64748b", fontSize: 16, mt: 0.5 }}
+                      />
+                      <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                        {order.deliveryAddress}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+            {/* Address - Show separately when no delivery assigned */}
+            {!isDeliveryAssigned && order.deliveryAddress && (
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  mb: 2,
+                  p: 1.5,
+                  bgcolor: "#1e293b",
+                  borderRadius: 2,
+                  alignItems: "flex-start",
+                }}
+              >
+                <LocationOnIcon
+                  sx={{ color: "#64748b", fontSize: 16, mt: 0.5 }}
+                />
+                <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
+                  {order.deliveryAddress}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Products Table */}
+            <TableContainer
+              component={Paper}
+              elevation={0}
+              sx={{ bgcolor: "#1e293b", borderRadius: "16px", mb: 2 }}
+            >
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        color: "#94a3b8",
+                        fontWeight: "bold",
+                        borderBottom: "1px solid #334155",
+                      }}
+                    >
+                      Product
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: "#94a3b8",
+                        fontWeight: "bold",
+                        borderBottom: "1px solid #334155",
+                      }}
+                    >
+                      Name
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        color: "#94a3b8",
+                        fontWeight: "bold",
+                        borderBottom: "1px solid #334155",
+                      }}
+                    >
+                      Price
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        color: "#94a3b8",
+                        fontWeight: "bold",
+                        borderBottom: "1px solid #334155",
+                      }}
+                    >
+                      Qty
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        color: "#94a3b8",
+                        fontWeight: "bold",
+                        borderBottom: "1px solid #334155",
+                      }}
+                    >
+                      Total
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {order.products.map((item, index) => {
+                    const product = item.productId;
+                    const price = product?.price || 0;
+                    const lineTotal = price * item.quantity;
+                    return (
+                      <TableRow
+                        key={index}
+                        sx={{
+                          "&:last-child td": { borderBottom: 0 },
+                          cursor: "pointer",
+                          "&:hover": { bgcolor: "#2d3748" },
+                          transition: "background 0.15s",
+                        }}
+                        onClick={() => navigate(`/product/${product?._id}`)}
+                      >
+                        <TableCell
+                          sx={{ borderBottom: "1px solid #334155", py: 1.5 }}
+                        >
+                          <Box
+                            component="img"
+                            src={
+                              product?.image
+                                ? `${import.meta.env.VITE_API_URL}/uploads/${product.image}`
+                                : "/placeholder.png"
+                            }
+                            alt={product?.name}
+                            sx={{
+                              width: 56,
+                              height: 56,
+                              borderRadius: "10px",
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ borderBottom: "1px solid #334155" }}>
+                          <Typography
+                            fontWeight="bold"
+                            sx={{ color: "#e2e8f0", fontSize: "14px" }}
+                          >
+                            {product?.name || "—"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{ borderBottom: "1px solid #334155" }}
+                        >
+                          <Typography
+                            sx={{
+                              color: "#94a3b8",
+                              fontSize: "14px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 0.2,
+                            }}
+                          >
+                            <CurrencyRupeeRoundedIcon sx={{ fontSize: 14 }} />
+                            {price}
+                          </Typography>
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{ borderBottom: "1px solid #334155" }}
+                        >
+                          <Chip
+                            label={`× ${item.quantity}`}
+                            size="small"
+                            sx={{
+                              bgcolor: "#334155",
+                              color: "#94a3b8",
+                              fontWeight: "bold",
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ borderBottom: "1px solid #334155" }}
+                        >
+                          <Typography
+                            fontWeight="bold"
+                            sx={{
+                              color: "#60a5fa",
+                              fontSize: "15px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "flex-end",
+                              gap: 0.2,
+                            }}
+                          >
+                            <CurrencyRupeeRoundedIcon sx={{ fontSize: 15 }} />
+                            {lineTotal}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Divider sx={{ borderColor: "#1e293b", mb: 2 }} />
+
+            {/* Actions */}
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+              }}
+            >
+              <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    px: 3,
+                    py: 1.5,
+                    borderRadius: "14px",
+                    bgcolor: "#1e293b",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
                   }}
                 >
-                  🚚 Delivery Details
+                  <Typography sx={{ color: "#94a3b8", fontSize: "14px" }}>
+                    Order Total:
+                  </Typography>
+                  <Typography
+                    fontWeight="bold"
+                    sx={{
+                      color: "#60a5fa",
+                      fontSize: "20px",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <CurrencyRupeeRoundedIcon />
+                    {order.totalAmount}
+                  </Typography>
+                </Paper>
+              </Box>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                {showCancelBtn && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<CancelOutlinedIcon />}
+                    sx={{
+                      borderRadius: "14px",
+                      textTransform: "none",
+                      px: 3,
+                      py: 1.2,
+                      fontWeight: "bold",
+                    }}
+                    onClick={() => handleConfirm("cancel")}
+                  >
+                    Cancel Order
+                  </Button>
+                )}
+                {showReturnBtn && (
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    startIcon={<AssignmentReturnOutlinedIcon />}
+                    sx={{
+                      borderRadius: "14px",
+                      textTransform: "none",
+                      px: 3,
+                      py: 1.2,
+                      fontWeight: "bold",
+                    }}
+                    onClick={() => handleConfirm("return")}
+                  >
+                    Return Order
+                  </Button>
+                )}
+              </Box>
+            </Stack>
+
+            {/* Tracking Stepper */}
+            {!isDelivered && !isCancelled && !isReturned && (
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: "22px",
+                  bgcolor: theme.bg,
+                  border: `1px solid ${theme.border}`,
+                }}
+              >
+                <Typography
+                  fontWeight="bold"
+                  sx={{ mb: 1, color: theme.titleColor }}
+                >
+                  Order Tracking
                 </Typography>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <PersonIcon sx={{ color: "#94a3b8", fontSize: 16 }} />
-                    <Typography sx={{ color: "#e2e8f0", fontSize: 13 }}>
-                      {deliveryPerson?.fullname ||
-                        deliveryPerson?.name ||
-                        "Delivery Partner"}
-                    </Typography>
-                  </Box>
-                  {deliveryPerson?.phone && (
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                    >
-                      <PhoneIcon sx={{ color: "#94a3b8", fontSize: 16 }} />
-                      <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
-                        {deliveryPerson.phone}
-                      </Typography>
-                    </Box>
-                  )}
-                  {deliveryStartedAt && (
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                    >
-                      <LocalShippingRoundedIcon
-                        sx={{ color: "#94a3b8", fontSize: 16 }}
-                      />
-                      <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
-                        Started: {new Date(deliveryStartedAt).toLocaleString()}
-                      </Typography>
-                    </Box>
-                  )}
-                  {deliveredAt && (
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                    >
-                      <CheckCircleRoundedIcon
-                        sx={{ color: "#4ade80", fontSize: 16 }}
-                      />
-                      <Typography sx={{ color: "#4ade80", fontSize: 13 }}>
-                        Delivered: {new Date(deliveredAt).toLocaleString()}
-                      </Typography>
-                    </Box>
-                  )}
+                <Stepper
+                  activeStep={activeStep}
+                  alternativeLabel
+                  connector={
+                    <ColorConnector
+                      activecolor={theme.connectorActive}
+                      completedcolor={theme.completedColor}
+                      inactivecolor={theme.connectorInactive}
+                    />
+                  }
+                >
+                  {FULL_STEPS.map((label, i) => (
+                    <Step key={label} completed={i < activeStep}>
+                      <StepLabel
+                        StepIconComponent={(props) => (
+                          <CustomStepIcon {...props} theme={theme} />
+                        )}
+                      >
+                        <Typography sx={{ fontSize: "11px", fontWeight: 500 }}>
+                          {STATUS_LABELS[label]}
+                        </Typography>
+                      </StepLabel>
+                    </Step>
+                  ))}
+                </Stepper>
+                {/* Status Time Stamps */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mt: 1,
+                    px: 1,
+                    flexWrap: "wrap",
+                    gap: 0.5,
+                  }}
+                >
+                  {FULL_STEPS.map((step, i) => {
+                    const stepTime = order[`${step.toLowerCase()}At`];
+                    return (
+                      <Box
+                        key={step}
+                        sx={{ textAlign: "center", flex: 1, minWidth: "60px" }}
+                      >
+                        <Typography
+                          sx={{
+                            color:
+                              i <= activeStep ? STATUS_COLORS[step] : "#94a3b8",
+                            fontSize: "10px",
+                            fontWeight: i <= activeStep ? 600 : 400,
+                          }}
+                        >
+                          {stepTime
+                            ? new Date(stepTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : i < activeStep
+                              ? "✓"
+                              : "—"}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
                 </Box>
               </Box>
             )}
 
-          {/* Address */}
-          {order.deliveryAddress && (
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                mb: 2,
-                p: 1.5,
-                bgcolor: "#1e293b",
-                borderRadius: 2,
-              }}
-            >
-              <LocationOnIcon sx={{ color: "#64748b", fontSize: 16 }} />
-              <Typography sx={{ color: "#94a3b8", fontSize: 13 }}>
-                {order.deliveryAddress}
-              </Typography>
-            </Box>
-          )}
-
-          {/* Products Table */}
-          <TableContainer
-            component={Paper}
-            elevation={0}
-            sx={{ bgcolor: "#1e293b", borderRadius: "16px", mb: 2 }}
-          >
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell
-                    sx={{
-                      color: "#94a3b8",
-                      fontWeight: "bold",
-                      borderBottom: "1px solid #334155",
-                    }}
-                  >
-                    Product
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      color: "#94a3b8",
-                      fontWeight: "bold",
-                      borderBottom: "1px solid #334155",
-                    }}
-                  >
-                    Name
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      color: "#94a3b8",
-                      fontWeight: "bold",
-                      borderBottom: "1px solid #334155",
-                    }}
-                  >
-                    Price
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{
-                      color: "#94a3b8",
-                      fontWeight: "bold",
-                      borderBottom: "1px solid #334155",
-                    }}
-                  >
-                    Qty
-                  </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{
-                      color: "#94a3b8",
-                      fontWeight: "bold",
-                      borderBottom: "1px solid #334155",
-                    }}
-                  >
-                    Total
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {order.products.map((item, index) => {
-                  const product = item.productId;
-                  const price = product?.price || 0;
-                  const lineTotal = price * item.quantity;
-                  return (
-                    <TableRow
-                      key={index}
-                      sx={{
-                        "&:last-child td": { borderBottom: 0 },
-                        cursor: "pointer",
-                        "&:hover": { bgcolor: "#2d3748" },
-                        transition: "background 0.15s",
-                      }}
-                      onClick={() => navigate(`/product/${product?._id}`)}
-                    >
-                      <TableCell
-                        sx={{ borderBottom: "1px solid #334155", py: 1.5 }}
-                      >
-                        <Box
-                          component="img"
-                          src={
-                            product?.image
-                              ? `${import.meta.env.VITE_API_URL}/uploads/${product.image}`
-                              : "/placeholder.png"
-                          }
-                          alt={product?.name}
-                          sx={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: "10px",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ borderBottom: "1px solid #334155" }}>
-                        <Typography
-                          fontWeight="bold"
-                          sx={{ color: "#e2e8f0", fontSize: "14px" }}
-                        >
-                          {product?.name || "—"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ borderBottom: "1px solid #334155" }}
-                      >
-                        <Typography
-                          sx={{
-                            color: "#94a3b8",
-                            fontSize: "14px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 0.2,
-                          }}
-                        >
-                          <CurrencyRupeeRoundedIcon sx={{ fontSize: 14 }} />
-                          {price}
-                        </Typography>
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ borderBottom: "1px solid #334155" }}
-                      >
-                        <Chip
-                          label={`× ${item.quantity}`}
-                          size="small"
-                          sx={{
-                            bgcolor: "#334155",
-                            color: "#94a3b8",
-                            fontWeight: "bold",
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ borderBottom: "1px solid #334155" }}
-                      >
-                        <Typography
-                          fontWeight="bold"
-                          sx={{
-                            color: "#60a5fa",
-                            fontSize: "15px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "flex-end",
-                            gap: 0.2,
-                          }}
-                        >
-                          <CurrencyRupeeRoundedIcon sx={{ fontSize: 15 }} />
-                          {lineTotal}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          <Divider sx={{ borderColor: "#1e293b", mb: 2 }} />
-
-          {/* Actions */}
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-            }}
-          >
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-              <Paper
-                elevation={0}
-                sx={{
-                  px: 3,
-                  py: 1.5,
-                  borderRadius: "14px",
-                  bgcolor: "#1e293b",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                }}
-              >
-                <Typography sx={{ color: "#94a3b8", fontSize: "14px" }}>
-                  Order Total:
-                </Typography>
-                <Typography
-                  fontWeight="bold"
+            {/* Status Banners */}
+            {isDelivered && !isReturned && (
+              <Fade in timeout={600}>
+                <Box
                   sx={{
-                    color: "#60a5fa",
-                    fontSize: "20px",
+                    mt: 2,
+                    p: 1,
+                    borderRadius: "20px",
+                    bgcolor: "#ccf8e3",
+                    border: "1px solid #5ce0ac",
                     display: "flex",
                     alignItems: "center",
+                    gap: 2,
                   }}
                 >
-                  <CurrencyRupeeRoundedIcon />
-                  {order.totalAmount}
-                </Typography>
-              </Paper>
-            </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              {showCancelBtn && (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<CancelOutlinedIcon />}
-                  sx={{
-                    borderRadius: "14px",
-                    textTransform: "none",
-                    px: 3,
-                    py: 1.2,
-                    fontWeight: "bold",
-                  }}
-                  onClick={() => handleConfirm("cancel")}
-                >
-                  Cancel Order
-                </Button>
-              )}
-              {showReturnBtn && (
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  startIcon={<AssignmentReturnOutlinedIcon />}
-                  sx={{
-                    borderRadius: "14px",
-                    textTransform: "none",
-                    px: 3,
-                    py: 1.2,
-                    fontWeight: "bold",
-                  }}
-                  onClick={() => handleConfirm("return")}
-                >
-                  Return Order
-                </Button>
-              )}
-            </Box>
-          </Stack>
-
-          {/* Tracking Stepper */}
-          {!isDelivered && !isCancelled && !isReturned && (
-            <Box
-              sx={{
-                mt: 2,
-                p: 2,
-                borderRadius: "22px",
-                bgcolor: theme.bg,
-                border: `1px solid ${theme.border}`,
-              }}
-            >
-              <Typography
-                fontWeight="bold"
-                sx={{ mb: 1, color: theme.titleColor }}
-              >
-                Order Tracking
-              </Typography>
-              <Stepper
-                activeStep={activeStep}
-                alternativeLabel
-                connector={
-                  <ColorConnector
-                    activecolor={theme.connectorActive}
-                    completedcolor={theme.completedColor}
-                    inactivecolor={theme.connectorInactive}
-                  />
-                }
-              >
-                {FULL_STEPS.map((label, i) => (
-                  <Step key={label} completed={i < activeStep}>
-                    <StepLabel
-                      StepIconComponent={(props) => (
-                        <CustomStepIcon {...props} theme={theme} />
-                      )}
-                    >
-                      <Typography sx={{ fontSize: "11px", fontWeight: 500 }}>
-                        {STATUS_LABELS[label]}
+                  <Avatar sx={{ bgcolor: "#10b981" }}>
+                    <CheckCircleRoundedIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography fontWeight="bold" sx={{ color: "#065f46" }}>
+                      Order Delivered Successfully
+                    </Typography>
+                    <Typography sx={{ color: "#047857", fontSize: "14px" }}>
+                      {isDeliveryAssigned &&
+                        `Delivered by ${deliveryPersonName}`}
+                    </Typography>
+                    {deliveredAt && (
+                      <Typography sx={{ color: "#047857", fontSize: "12px" }}>
+                        {new Date(deliveredAt).toLocaleString()}
                       </Typography>
-                    </StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
-              {/* Status Time Stamps */}
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  mt: 1,
-                  px: 1,
-                  flexWrap: "wrap",
-                  gap: 0.5,
-                }}
-              >
-                {FULL_STEPS.map((step, i) => {
-                  const stepTime = order[`${step.toLowerCase()}At`];
-                  return (
-                    <Box
-                      key={step}
-                      sx={{ textAlign: "center", flex: 1, minWidth: "60px" }}
-                    >
-                      <Typography
-                        sx={{
-                          color:
-                            i <= activeStep ? STATUS_COLORS[step] : "#94a3b8",
-                          fontSize: "10px",
-                          fontWeight: i <= activeStep ? 600 : 400,
-                        }}
-                      >
-                        {stepTime
-                          ? new Date(stepTime).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : i < activeStep
-                            ? "✓"
-                            : "—"}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Box>
-          )}
-
-          {/* Status Banners */}
-          {isDelivered && !isReturned && (
-            <Fade in timeout={600}>
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  borderRadius: "20px",
-                  bgcolor: "#ccf8e3",
-                  border: "1px solid #5ce0ac",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <Avatar sx={{ bgcolor: "#10b981" }}>
-                  <CheckCircleRoundedIcon />
-                </Avatar>
-                <Box>
-                  <Typography fontWeight="bold" sx={{ color: "#065f46" }}>
-                    Order Delivered Successfully
-                  </Typography>
-                  <Typography sx={{ color: "#047857", fontSize: "14px" }}>
-                    Thank you for shopping with us
-                  </Typography>
+                    )}
+                  </Box>
                 </Box>
-              </Box>
-            </Fade>
-          )}
-          {isCancelled && (
-            <Fade in timeout={600}>
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  borderRadius: "20px",
-                  bgcolor: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <Avatar sx={{ bgcolor: "#ef4444" }}>
-                  <CancelOutlinedIcon />
-                </Avatar>
-                <Box>
-                  <Typography fontWeight="bold" sx={{ color: "#7f1d1d" }}>
-                    Order Cancelled
-                  </Typography>
-                  <Typography sx={{ color: "#b91c1c", fontSize: "14px" }}>
-                    This order has been cancelled
-                  </Typography>
+              </Fade>
+            )}
+            {isCancelled && (
+              <Fade in timeout={600}>
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    borderRadius: "20px",
+                    bgcolor: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                  }}
+                >
+                  <Avatar sx={{ bgcolor: "#ef4444" }}>
+                    <CancelOutlinedIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography fontWeight="bold" sx={{ color: "#7f1d1d" }}>
+                      Order Cancelled
+                    </Typography>
+                    <Typography sx={{ color: "#b91c1c", fontSize: "14px" }}>
+                      This order has been cancelled
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            </Fade>
-          )}
-          {isReturned && (
-            <Fade in timeout={600}>
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  borderRadius: "20px",
-                  bgcolor: "#f5f3ff",
-                  border: "1px solid #ddd6fe",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <Avatar sx={{ bgcolor: "#8b5cf6" }}>
-                  <AssignmentReturnOutlinedIcon />
-                </Avatar>
-                <Box>
-                  <Typography fontWeight="bold" sx={{ color: "#4c1d95" }}>
-                    Return Request Submitted
-                  </Typography>
-                  <Typography sx={{ color: "#6d28d9", fontSize: "14px" }}>
-                    We will process your return shortly
-                  </Typography>
+              </Fade>
+            )}
+            {isReturned && (
+              <Fade in timeout={600}>
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    borderRadius: "20px",
+                    bgcolor: "#f5f3ff",
+                    border: "1px solid #ddd6fe",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                  }}
+                >
+                  <Avatar sx={{ bgcolor: "#8b5cf6" }}>
+                    <AssignmentReturnOutlinedIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography fontWeight="bold" sx={{ color: "#4c1d95" }}>
+                      Return Request Submitted
+                    </Typography>
+                    <Typography sx={{ color: "#6d28d9", fontSize: "14px" }}>
+                      We will process your return shortly
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            </Fade>
-          )}
-        </CardContent>
-      </Card>
+              </Fade>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
     </>
   );
 };
@@ -907,6 +977,8 @@ const OrderDetails = () => {
             borderRadius: "24px",
             textAlign: "center",
             bgcolor: "#1e293b",
+            maxWidth: "600px",
+            mx: "auto",
           }}
         >
           <Inventory2RoundedIcon
@@ -930,7 +1002,7 @@ const OrderDetails = () => {
           </Button>
         </Paper>
       ) : (
-        <Stack spacing={4}>
+        <Stack spacing={4} sx={{ maxWidth: "700px", mx: "auto" }}>
           {orders.map((order) => (
             <OrderCard key={order._id} order={order} onRefresh={getOrders} />
           ))}

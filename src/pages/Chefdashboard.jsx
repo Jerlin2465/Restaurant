@@ -1,4 +1,5 @@
 // src/pages/ChefDashboard.jsx
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
@@ -17,6 +18,8 @@ import {
   Tabs,
   Avatar,
   Stack,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
 import LocalDiningIcon from "@mui/icons-material/LocalDining";
@@ -230,10 +233,14 @@ const ChefOrderCard = ({ order, onUpdate }) => {
 const Chefdashboard = () => {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
-  const [deliveryOrders, setDeliveryOrders] = useState([]); // Added state for delivery orders
+  const [deliveryOrders, setDeliveryOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
   const [msg, setMsg] = useState({ open: false, text: "", severity: "info" });
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   // ✅ FETCH FROM FOODORDER API (Server Orders)
   const fetchOrders = async () => {
@@ -334,7 +341,7 @@ const Chefdashboard = () => {
     init();
     const interval = setInterval(() => {
       fetchOrders();
-      fetchDeliveryOrders(); // Also refresh delivery orders count
+      fetchDeliveryOrders();
     }, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -400,11 +407,18 @@ const Chefdashboard = () => {
   const readyCount = orders.filter((o) => o.status === "Ready").length;
 
   return (
-    <Box sx={{ p: 3, bgcolor: "#0f172a", minHeight: "100vh", mt: 8 }}>
+    <Box
+      sx={{
+        p: { xs: 1.5, sm: 2, md: 3 },
+        bgcolor: "#0f172a",
+        minHeight: "100vh",
+        mt: { xs: 6, sm: 7, md: 8 },
+      }}
+    >
       {/* Header */}
       <Box
         sx={{
-          mb: 4,
+          mb: { xs: 2, sm: 3, md: 4 },
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
@@ -413,30 +427,77 @@ const Chefdashboard = () => {
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ color: "#fff", fontWeight: 700 }}>
+          <Typography
+            variant="h4"
+            sx={{
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: { xs: "1.2rem", sm: "1.5rem", md: "2.125rem" },
+            }}
+          >
             👨‍🍳 Chef Dashboard
           </Typography>
-          <Typography sx={{ color: "#9ca3af", mt: 0.5 }}>
+          <Typography
+            sx={{
+              color: "#9ca3af",
+              mt: 0.5,
+              fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.875rem" },
+            }}
+          >
             Manage kitchen orders from servers
           </Typography>
         </Box>
       </Box>
 
-      {/* Tabs with Badges */}
+      {/* Tabs with Badges - Scrollable on mobile */}
       <Tabs
         value={tab}
         onChange={(_, v) => setTab(v)}
+        variant={isMobile ? "scrollable" : "standard"}
+        scrollButtons={isMobile ? "auto" : false}
+        allowScrollButtonsMobile
         sx={{
-          mb: 3,
-          "& .MuiTab-root": { color: "#818a9b" },
+          mb: { xs: 2, sm: 3 },
+          "& .MuiTabs-scrollButtons": {
+            color: "#facc15",
+            "&.Mui-disabled": {
+              color: "#374151",
+            },
+          },
+          "& .MuiTab-root": {
+            color: "#818a9b",
+            fontSize: { xs: "0.65rem", sm: "0.75rem", md: "0.875rem" },
+            padding: { xs: "6px 12px", sm: "8px 16px", md: "12px 20px" },
+            minWidth: { xs: "auto", sm: "auto", md: "auto" },
+            textTransform: "none",
+            fontWeight: 600,
+          },
           "& .Mui-selected": { color: "#facc15" },
           "& .MuiTabs-indicator": { bgcolor: "#facc15" },
+          "& .MuiTabScrollButton-root": {
+            width: { xs: 30, sm: 40 },
+          },
+          borderBottom: "1px solid #1f2937",
         }}
       >
         <Tab
           label={
-            <Badge badgeContent={activeOrders.length} color="warning">
-              <Box sx={{ pr: activeOrders.length > 0 ? 1.5 : 0 }}>
+            <Badge
+              badgeContent={activeOrders.length}
+              color="warning"
+              sx={{
+                "& .MuiBadge-badge": {
+                  fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                  width: { xs: 16, sm: 20 },
+                  height: { xs: 16, sm: 20 },
+                  right: { xs: -6, sm: -8 },
+                  top: { xs: 2, sm: 4 },
+                },
+              }}
+            >
+              <Box
+                sx={{ pr: activeOrders.length > 0 ? { xs: 1, sm: 1.5 } : 0 }}
+              >
                 Server Orders
               </Box>
             </Badge>
@@ -451,10 +512,17 @@ const Chefdashboard = () => {
                 "& .MuiBadge-badge": {
                   bgcolor: "#f97316",
                   color: "#fff",
+                  fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                  width: { xs: 16, sm: 20 },
+                  height: { xs: 16, sm: 20 },
+                  right: { xs: -6, sm: -8 },
+                  top: { xs: 2, sm: 4 },
                 },
               }}
             >
-              <Box sx={{ pr: pendingDeliveryCount > 0 ? 1.5 : 0 }}>
+              <Box
+                sx={{ pr: pendingDeliveryCount > 0 ? { xs: 1, sm: 1.5 } : 0 }}
+              >
                 Delivery Orders
               </Box>
             </Badge>
@@ -463,8 +531,22 @@ const Chefdashboard = () => {
         />
         <Tab
           label={
-            <Badge badgeContent={completedOrders.length} color="success">
-              <Box sx={{ pr: completedOrders.length > 0 ? 1.5 : 0 }}>
+            <Badge
+              badgeContent={completedOrders.length}
+              color="success"
+              sx={{
+                "& .MuiBadge-badge": {
+                  fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                  width: { xs: 16, sm: 20 },
+                  height: { xs: 16, sm: 20 },
+                  right: { xs: -6, sm: -8 },
+                  top: { xs: 2, sm: 4 },
+                },
+              }}
+            >
+              <Box
+                sx={{ pr: completedOrders.length > 0 ? { xs: 1, sm: 1.5 } : 0 }}
+              >
                 Completed
               </Box>
             </Badge>
@@ -472,7 +554,7 @@ const Chefdashboard = () => {
         />
         <Tab
           label=" Menu Stock"
-          icon={<RestaurantMenuIcon />}
+          icon={<RestaurantMenuIcon sx={{ fontSize: { xs: 16, sm: 20 } }} />}
           iconPosition="start"
         />
       </Tabs>
@@ -480,14 +562,14 @@ const Chefdashboard = () => {
       {/* Tab 0: Server Orders (Active) */}
       {tab === 0 && (
         <>
-          {/* Summary Chips */}
+          {/* Summary Chips - Responsive */}
           <Box
             sx={{
               display: "flex",
-              gap: 1.5,
+              gap: { xs: 0.5, sm: 1, md: 1.5 },
               flexWrap: "wrap",
-              marginBottom: 4,
-              marginLeft: 2,
+              marginBottom: { xs: 2, sm: 3, md: 4 },
+              marginLeft: { xs: 0, sm: 2 },
             }}
           >
             {[
@@ -498,26 +580,34 @@ const Chefdashboard = () => {
               <Chip
                 key={s.label}
                 label={s.label}
+                size={isMobile ? "small" : "medium"}
                 sx={{
                   bgcolor: `${s.color}22`,
                   color: s.color,
                   fontWeight: 700,
                   border: `1px solid ${s.color}44`,
+                  fontSize: { xs: "0.6rem", sm: "0.75rem" },
+                  height: { xs: 24, sm: 32 },
                 }}
               />
             ))}
           </Box>
+
           {activeOrders.length === 0 ? (
             <Box textAlign="center" py={8}>
-              <Typography sx={{ color: "#4b5563", fontSize: 18 }}>
+              <Typography
+                sx={{ color: "#4b5563", fontSize: { xs: 16, sm: 18 } }}
+              >
                 No active orders from servers 🎉
               </Typography>
-              <Typography sx={{ color: "#374151", fontSize: 14, mt: 1 }}>
+              <Typography
+                sx={{ color: "#374151", fontSize: { xs: 12, sm: 14 }, mt: 1 }}
+              >
                 When a server places an order, it will appear here.
               </Typography>
             </Box>
           ) : (
-            <Grid container spacing={3}>
+            <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
               {activeOrders.map((o) => (
                 <Grid item xs={12} sm={6} md={4} key={o._id}>
                   <ChefOrderCard order={o} onUpdate={updateStatus} />
@@ -536,30 +626,41 @@ const Chefdashboard = () => {
         <>
           {completedOrders.length === 0 ? (
             <Box textAlign="center" py={8}>
-              <Typography sx={{ color: "#4b5563", fontSize: 18 }}>
+              <Typography
+                sx={{ color: "#4b5563", fontSize: { xs: 16, sm: 18 } }}
+              >
                 No completed orders yet
               </Typography>
             </Box>
           ) : (
-            <Grid container spacing={3}>
+            <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
               {completedOrders.map((o) => (
                 <Grid item xs={12} sm={6} md={4} key={o._id}>
                   <Paper
                     sx={{
                       bgcolor: "#111827",
                       borderRadius: 3,
-                      p: 2.5,
+                      p: { xs: 2, sm: 2.5 },
                       border: "1px solid #4ade8044",
                     }}
                   >
                     <Typography
-                      sx={{ color: "#4ade80", fontWeight: "bold", mb: 0.5 }}
+                      sx={{
+                        color: "#4ade80",
+                        fontWeight: "bold",
+                        mb: 0.5,
+                        fontSize: { xs: 13, sm: 15 },
+                      }}
                     >
                       🪑 Table #{o.tableNumber || "N/A"}
                     </Typography>
                     {o.serverName && (
                       <Typography
-                        sx={{ color: "#6b7280", fontSize: 12, mb: 1 }}
+                        sx={{
+                          color: "#6b7280",
+                          fontSize: { xs: 11, sm: 12 },
+                          mb: 1,
+                        }}
                       >
                         Server: {o.serverName}
                       </Typography>
@@ -567,7 +668,7 @@ const Chefdashboard = () => {
                     {o.items?.slice(0, 3).map((item, index) => (
                       <Typography
                         key={index}
-                        sx={{ color: "#d1d5db", fontSize: 14 }}
+                        sx={{ color: "#d1d5db", fontSize: { xs: 12, sm: 14 } }}
                       >
                         {item.name} × {item.quantity}
                       </Typography>
@@ -591,9 +692,9 @@ const Chefdashboard = () => {
         </>
       )}
 
-      {/* Tab 3: Menu Stock */}
+      {/* Tab 3: Menu Stock - Responsive Grid */}
       {tab === 3 && (
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
           {products.map((product) => (
             <Grid item xs={12} sm={6} md={4} lg={3} key={product._id}>
               <Paper
@@ -608,16 +709,39 @@ const Chefdashboard = () => {
                   component="img"
                   src={`${API}/uploads/${product.image}`}
                   alt={product.productName}
-                  sx={{ width: "100%", height: 180, objectFit: "cover" }}
+                  sx={{
+                    width: "100%",
+                    height: { xs: 150, sm: 180 },
+                    objectFit: "cover",
+                  }}
                 />
-                <Box p={2}>
-                  <Typography sx={{ color: "#facc15", fontWeight: "bold" }}>
+                <Box p={{ xs: 1.5, sm: 2 }}>
+                  <Typography
+                    sx={{
+                      color: "#facc15",
+                      fontWeight: "bold",
+                      fontSize: { xs: 14, sm: 16 },
+                    }}
+                  >
                     {product.name}
                   </Typography>
-                  <Typography sx={{ color: "#facc15", fontWeight: "bold" }}>
+                  <Typography
+                    sx={{
+                      color: "#facc15",
+                      fontWeight: "bold",
+                      fontSize: { xs: 12, sm: 14 },
+                      mt: 0.5,
+                    }}
+                  >
                     {product.description}
                   </Typography>
-                  <Typography sx={{ color: "#9ca3af", fontSize: 12, mb: 1 }}>
+                  <Typography
+                    sx={{
+                      color: "#9ca3af",
+                      fontSize: { xs: 11, sm: 12 },
+                      mb: 1,
+                    }}
+                  >
                     ₹{product.price}
                   </Typography>
                   <Chip
@@ -635,13 +759,18 @@ const Chefdashboard = () => {
                       color:
                         product.stock === "available" ? "#4ade80" : "#f87171",
                       border: `1px solid ${product.stock === "available" ? "#4ade80" : "#f87171"}44`,
+                      fontSize: { xs: "0.6rem", sm: "0.75rem" },
                     }}
                   />
                   <Button
                     fullWidth
                     variant="outlined"
-                    size="small"
-                    sx={{ mt: 1 }}
+                    size={isMobile ? "small" : "medium"}
+                    sx={{
+                      mt: 1,
+                      fontSize: { xs: "0.65rem", sm: "0.875rem" },
+                      padding: { xs: "4px 8px", sm: "6px 16px" },
+                    }}
                     color={product.stock === "available" ? "error" : "success"}
                     onClick={() => toggleStock(product._id, product.stock)}
                   >

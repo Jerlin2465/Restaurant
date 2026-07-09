@@ -38,7 +38,7 @@ import AssignmentReturnOutlinedIcon from "@mui/icons-material/AssignmentReturnOu
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// ─── DARK THEME TOKENS 
+// ─── DARK THEME TOKENS
 const dark = {
   pageBg: "#0d0d0d",
   surfacePrimary: "#111111",
@@ -51,7 +51,7 @@ const dark = {
   textMuted: "#666666",
 };
 
-// ─── REUSABLE DARK INPUT SX 
+// ─── REUSABLE DARK INPUT SX
 const darkInputSx = {
   "& .MuiOutlinedInput-root": {
     background: "#1a1a1a",
@@ -66,7 +66,7 @@ const darkInputSx = {
   },
 };
 
-// ─── REUSABLE DARK SELECT SX 
+// ─── REUSABLE DARK SELECT SX
 const darkSelectSx = {
   background: "#1a1a1a",
   color: dark.textPrimary,
@@ -76,7 +76,7 @@ const darkSelectSx = {
   "& .MuiSvgIcon-root": { color: dark.textMuted },
 };
 
-// ─── REUSABLE DARK SELECT MENU PROPS 
+// ─── REUSABLE DARK SELECT MENU PROPS
 const darkSelectMenuProps = {
   PaperProps: {
     sx: {
@@ -91,7 +91,7 @@ const darkSelectMenuProps = {
   },
 };
 
-// ─── STATUS CONFIG 
+// ─── STATUS CONFIG
 const STATUS_OPTIONS = [
   { value: "", label: "All", bg: "#1e1e1e", color: "#aaaaaa", dot: null },
   {
@@ -138,14 +138,7 @@ const STATUS_OPTIONS = [
   },
 ];
 
-const statusChipStyle = (status) => {
-  const found = STATUS_OPTIONS.find((s) => s.value === status);
-  return found
-    ? { bg: found.bg, color: found.color }
-    : { bg: "#1e1e1e", color: "#aaaaaa" };
-};
-
-// ─── SAFE INITIALS 
+// ─── SAFE INITIALS
 const initials = (name) => {
   if (!name || name === "-") return "?";
   return name
@@ -156,7 +149,7 @@ const initials = (name) => {
     .toUpperCase();
 };
 
-// ─── FLATTEN ORDERS (one row per ORDER, products grouped inside) 
+// ─── FLATTEN ORDERS (one row per ORDER, products grouped inside)
 const flattenOrders = (orders) => {
   return orders.map((order) => {
     const products = (order.products || []).map((item) => ({
@@ -190,8 +183,7 @@ const flattenOrders = (orders) => {
   });
 };
 
-// ─── PRODUCT LIST CELL 
-// Renders all products in a single order as a compact list inside the table cell
+// ─── PRODUCT LIST CELL
 const ProductListCell = ({ products, navigate }) => (
   <Box sx={{ display: "flex", flexDirection: "column", gap: 0.8 }}>
     {products.map((p, idx) => (
@@ -210,7 +202,6 @@ const ProductListCell = ({ products, navigate }) => (
           minWidth: 320,
         }}
       >
-        {/* Product Name */}
         <Typography
           sx={{
             fontSize: 12,
@@ -225,7 +216,6 @@ const ProductListCell = ({ products, navigate }) => (
           {p.productName}
         </Typography>
 
-        {/* Qty badge */}
         <Chip
           label={`×${p.quantity}`}
           size="small"
@@ -239,7 +229,6 @@ const ProductListCell = ({ products, navigate }) => (
           }}
         />
 
-        {/* Unit price */}
         <Typography
           sx={{
             fontSize: 11,
@@ -251,7 +240,6 @@ const ProductListCell = ({ products, navigate }) => (
           ₹{p.price.toLocaleString("en-IN")}
         </Typography>
 
-        {/* Line total */}
         <Typography
           sx={{
             fontSize: 12,
@@ -264,7 +252,6 @@ const ProductListCell = ({ products, navigate }) => (
           ₹{p.lineTotal.toLocaleString("en-IN")}
         </Typography>
 
-        {/* View button */}
         <Tooltip title={p.productId ? "View product" : "Product not found"}>
           <span>
             <Button
@@ -300,12 +287,13 @@ const ProductListCell = ({ products, navigate }) => (
 );
 
 // ─── COMPONENT
-const OrderList = () => {
+const Orderstatus = () => {
   const [orders, setOrders] = useState([]);
   const [search, setSearch] = useState("");
   const [payFilter, setPayFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(null); // Track which order is being updated
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
@@ -320,28 +308,63 @@ const OrderList = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
-  // ─── FETCH
+  // ─── GET AUTH TOKEN ───
+  const getAuthToken = () => {
+    return localStorage.getItem("token");
+  };
+
+  // ─── GET AUTH HEADERS ───
+  const getAuthHeaders = () => {
+    const token = getAuthToken();
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    };
+  };
+
+  // ─── FETCH ORDERS ───
   const getOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/order/all-orders`);
-      setOrders(res.data.orders || []);
+      const response = await axios.get(
+        `${API_URL}/order/all-orders`,
+        getAuthHeaders(),
+      );
+      setOrders(response.data.orders || []);
     } catch (error) {
       console.error("ORDER FETCH ERROR:", error);
-      setSnack({ open: true, msg: "Failed to load orders", severity: "error" });
+
+      // Handle unauthorized error
+      if (error.response?.status === 401) {
+        setSnack({
+          open: true,
+          msg: "Session expired. Please login again.",
+          severity: "error",
+        });
+        // Redirect to login after 2 seconds
+        setTimeout(() => navigate("/login"), 2000);
+      } else {
+        setSnack({
+          open: true,
+          msg: error.response?.data?.message || "Failed to load orders",
+          severity: "error",
+        });
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     getOrders();
   }, [getOrders]);
 
-  //  DERIVED: one row per order
+  // ─── DERIVED: one row per order ───
   const rows = useMemo(() => flattenOrders(orders), [orders]);
 
-  //  FILTER
+  // ─── FILTER ───
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return rows.filter((r) => {
@@ -356,17 +379,18 @@ const OrderList = () => {
     });
   }, [rows, search, payFilter, statusFilter]);
 
-  //  STATS
+  // ─── STATS ───
   const totalRevenue = useMemo(
     () => orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
     [orders],
   );
+
   const countByStatus = useCallback(
     (s) => orders.filter((o) => o.orderStatus === s).length,
     [orders],
   );
 
-  //  DELETE
+  // ─── DELETE ORDER ───
   const askDelete = (id) => {
     setPendingDeleteId(id);
     setConfirmOpen(true);
@@ -375,7 +399,10 @@ const OrderList = () => {
   const handleDeleteConfirmed = async () => {
     setConfirmOpen(false);
     try {
-      await axios.delete(`${API_URL}/order/delete-order/${pendingDeleteId}`);
+      await axios.delete(
+        `${API_URL}/order/delete-order/${pendingDeleteId}`,
+        getAuthHeaders(),
+      );
       setSnack({
         open: true,
         msg: "Order deleted successfully",
@@ -385,8 +412,7 @@ const OrderList = () => {
     } catch (error) {
       setSnack({
         open: true,
-        msg:
-          "Delete failed: " + (error?.response?.data?.message || error.message),
+        msg: error?.response?.data?.message || "Delete failed",
         severity: "error",
       });
     } finally {
@@ -394,25 +420,56 @@ const OrderList = () => {
     }
   };
 
-  //  STATUS UPDATE
-  const handleStatusUpdate = async (id, status) => {
+  // ─── UPDATE ORDER STATUS ───
+  const handleStatusUpdate = async (id, newStatus) => {
+    // Don't update if status hasn't changed
+    const currentOrder = orders.find((o) => o._id === id);
+    if (currentOrder?.orderStatus === newStatus) {
+      return;
+    }
+
+    setUpdatingStatus(id); // Show loading state for this order
+
     try {
-      await axios.put(`${API_URL}/order/update-order/${id}`, {
-        orderStatus: status,
-      });
-      getOrders();
-    } catch (error) {
+      await axios.put(
+        `${API_URL}/order/update-order/${id}`,
+        { orderStatus: newStatus },
+        getAuthHeaders(),
+      );
+
+      // Refresh orders to get updated data
+      await getOrders();
+
       setSnack({
         open: true,
-        msg:
-          "Status update failed: " +
-          (error?.response?.data?.message || error.message),
+        msg: `Order status updated to ${newStatus} successfully`,
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Status update error:", error);
+
+      let errorMsg = "Failed to update order status";
+      if (error.response?.status === 401) {
+        errorMsg = "Session expired. Please login again.";
+        setTimeout(() => navigate("/login"), 2000);
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+
+      setSnack({
+        open: true,
+        msg: errorMsg,
         severity: "error",
       });
+
+      // Refresh orders to revert any optimistic updates
+      getOrders();
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
-  //  STAT CARDS
+  // ─── STAT CARDS ───
   const statCards = [
     {
       label: "Total Orders",
@@ -432,10 +489,15 @@ const OrderList = () => {
       bg: "#1e1e3a",
       color: "#818CF8",
     },
-   
     {
-      label: "Ready",
-      value: countByStatus("Ready"),
+      label: "Processing",
+      value: countByStatus("Processing"),
+      bg: "#2a2000",
+      color: "#FBBF24",
+    },
+    {
+      label: "Picked Up",
+      value: countByStatus("Picked Up"),
       bg: "#001a2e",
       color: "#38BDF8",
     },
@@ -497,7 +559,7 @@ const OrderList = () => {
       {/* ── STAT CARDS ── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {statCards.map((item) => (
-          <Grid xs={6} sm={4} md={3} lg={1.5} key={item.label}>
+          <Grid item xs={6} sm={4} md={3} lg={1.5} key={item.label}>
             <Paper
               elevation={0}
               sx={{
@@ -635,7 +697,7 @@ const OrderList = () => {
                   "Order ID",
                   "User ID",
                   "User Name",
-                  "Products  (Name · ×Qty · Unit Price · Total)",
+                  "Products (Name · ×Qty · Unit Price · Total)",
                   "Order Total",
                   "Payment",
                   "Order Status",
@@ -662,7 +724,7 @@ const OrderList = () => {
               {loading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     align="center"
                     sx={{ py: 6, borderColor: dark.border }}
                   >
@@ -672,7 +734,7 @@ const OrderList = () => {
               ) : filtered.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     align="center"
                     sx={{
                       py: 6,
@@ -686,6 +748,7 @@ const OrderList = () => {
               ) : (
                 filtered.map((r) => {
                   const isReturned = r.orderStatus === "Returned";
+                  const isUpdating = updatingStatus === r.orderId;
 
                   return (
                     <TableRow
@@ -709,7 +772,8 @@ const OrderList = () => {
                       >
                         {r.orderId}
                       </TableCell>
-                      {/* userID */}
+
+                      {/* USER ID */}
                       <TableCell
                         sx={{
                           fontFamily: "monospace",
@@ -719,6 +783,7 @@ const OrderList = () => {
                       >
                         {r.userId}
                       </TableCell>
+
                       {/* USER */}
                       <TableCell sx={{ color: dark.textPrimary }}>
                         <Box
@@ -768,7 +833,7 @@ const OrderList = () => {
                         </Box>
                       </TableCell>
 
-                      {/* PRODUCTS — grouped list */}
+                      {/* PRODUCTS */}
                       <TableCell sx={{ py: 1.2 }}>
                         <ProductListCell
                           products={r.products}
@@ -806,36 +871,60 @@ const OrderList = () => {
                         />
                       </TableCell>
 
-                      {/* ORDER STATUS */}
+                      {/* ORDER STATUS - WITH LOADING STATE */}
                       <TableCell>
-                        <Select
-                          size="small"
-                          value={r.orderStatus}
-                          onChange={(e) =>
-                            handleStatusUpdate(r.orderId, e.target.value)
-                          }
-                          sx={{
-                            minWidth: 140,
-                            borderRadius: 2,
-                            color: "#fff",
-                            backgroundColor: "#222",
-                            "& .MuiOutlinedInput-notchedOutline": {
-                              borderColor: dark.border,
-                            },
-                            "&:hover .MuiOutlinedInput-notchedOutline": {
-                              borderColor: "#444",
-                            },
-                            "& .MuiSvgIcon-root": { color: dark.textMuted },
-                          }}
-                          MenuProps={darkSelectMenuProps}
-                        >
-                          <MenuItem value="Placed">Placed</MenuItem>
-                          <MenuItem value="Processing">Processing</MenuItem>
-                          <MenuItem value="Picked Up">Picked Up</MenuItem>
-                          <MenuItem value="Delivered">Delivered</MenuItem>
-                          <MenuItem value="Cancelled">Cancelled</MenuItem>
-                          <MenuItem value="Returned">Returned</MenuItem>
-                        </Select>
+                        {isUpdating ? (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <CircularProgress
+                              size={20}
+                              sx={{ color: "#60A5FA" }}
+                            />
+                            <Typography
+                              sx={{ color: dark.textMuted, fontSize: 12 }}
+                            >
+                              Updating...
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Select
+                            size="small"
+                            value={r.orderStatus}
+                            onChange={(e) =>
+                              handleStatusUpdate(r.orderId, e.target.value)
+                            }
+                            disabled={isUpdating}
+                            sx={{
+                              minWidth: 140,
+                              borderRadius: 2,
+                              color: "#fff",
+                              backgroundColor: "#222",
+                              "& .MuiOutlinedInput-notchedOutline": {
+                                borderColor: dark.border,
+                              },
+                              "&:hover .MuiOutlinedInput-notchedOutline": {
+                                borderColor: "#444",
+                              },
+                              "& .MuiSvgIcon-root": { color: dark.textMuted },
+                              "&.Mui-disabled": {
+                                opacity: 0.6,
+                              },
+                            }}
+                            MenuProps={darkSelectMenuProps}
+                          >
+                            <MenuItem value="Placed">Placed</MenuItem>
+                            <MenuItem value="Processing">Processing</MenuItem>
+                            <MenuItem value="Picked Up">Picked Up</MenuItem>
+                            <MenuItem value="Delivered">Delivered</MenuItem>
+                            <MenuItem value="Cancelled">Cancelled</MenuItem>
+                            <MenuItem value="Returned">Returned</MenuItem>
+                          </Select>
+                        )}
                       </TableCell>
 
                       {/* DATE */}
@@ -849,6 +938,7 @@ const OrderList = () => {
                           variant="contained"
                           size="small"
                           onClick={() => askDelete(r.orderId)}
+                          disabled={isUpdating}
                           sx={{
                             minWidth: "36px",
                             borderRadius: 2,
@@ -858,6 +948,10 @@ const OrderList = () => {
                             "&:hover": {
                               bgcolor: "#3d0000",
                               boxShadow: "none",
+                            },
+                            "&.Mui-disabled": {
+                              bgcolor: "#1a0000",
+                              color: "#555",
                             },
                           }}
                         >
@@ -920,9 +1014,9 @@ const OrderList = () => {
       {/* ── SNACKBAR ── */}
       <Snackbar
         open={snack.open}
-        autoHideDuration={3500}
+        autoHideDuration={4000}
         onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={() => setSnack((s) => ({ ...s, open: false }))}
@@ -942,4 +1036,4 @@ const OrderList = () => {
   );
 };
 
-export default OrderList;
+export default Orderstatus;
